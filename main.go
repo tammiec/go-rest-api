@@ -1,9 +1,9 @@
 package main
 
-
 import (
 	"fmt"
 	"log"
+	"os"
 	"net/http"
 )
 
@@ -18,6 +18,24 @@ func handleRequests() {
     log.Fatal(http.ListenAndServe(":8000", nil))
 }
 
+func getEnv(key string) string {
+	v, ok := os.LookupEnv(key)
+	if !ok {
+		panic(fmt.Sprintf("Variable %s is not set", key))
+	} else if v == "" {
+		panic(fmt.Sprintf("Variable %s is blank", key))
+	}
+	return v
+}
+
 func main() {
+	// user := getEnv("PSQL_USER")
+	// password := getEnv("PSQL_PASSWORD")
+	// host := getEnv("PSQL_HOSTNAME")
+	// dbPort := getEnv("PSQL_PORT")
+	// dbName := getEnv("PSQL_DB_NAME")
+	// httpHost := getEnv("HTTP_HOST")
+	// httpPort := getEnv("HTTP_PORT")
+	
     handleRequests()
 }
