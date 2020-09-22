@@ -5,6 +5,9 @@ import (
 	"log"
 	"os"
 	"net/http"
+	"context"
+
+	"github.com/jackc/pgx/v4/pgxpool"
 )
 
 func homePage(w http.ResponseWriter, r *http.Request){
@@ -29,13 +32,20 @@ func getEnv(key string) string {
 }
 
 func main() {
-	// user := getEnv("PSQL_USER")
-	// password := getEnv("PSQL_PASSWORD")
-	// host := getEnv("PSQL_HOSTNAME")
-	// dbPort := getEnv("PSQL_PORT")
-	// dbName := getEnv("PSQL_DB_NAME")
-	// httpHost := getEnv("HTTP_HOST")
-	// httpPort := getEnv("HTTP_PORT")
+	dbpool, err := pgxpool.Connect(context.Background(), getEnv("DATABASE_URL"))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
+		os.Exit(1)
+	}
+	defer dbpool.Close()
+
+	var name string
+	err = dbpool.QueryRow(context.Background(), "SELECT name FROM users WHERE id=5").Scan(&name)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Println(name)
 	
-    handleRequests()
+	handleRequests()
 }
