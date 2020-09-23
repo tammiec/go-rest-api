@@ -17,3 +17,12 @@ func GetDbPool(dbUrl string) *pgxpool.Pool {
 	return dbpool
 }
 
+func GetUsers(dbpool *pgxpool.Pool) string {
+	var name string
+	err := dbpool.QueryRow(context.Background(), "SELECT name FROM users WHERE id=5").Scan(&name)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
+		os.Exit(1)
+	}
+	return name
+}
