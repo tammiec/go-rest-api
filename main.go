@@ -7,7 +7,7 @@ import (
 	"os"
 	"context"
 
-	"github.com/tammiec/go-rest-api/model"
+	"github.com/tammiec/go-rest-api/db"
 )
 
 func homePage(w http.ResponseWriter, r *http.Request){
@@ -33,7 +33,7 @@ func getEnv(key string) string {
 
 func main() {
 	dbUrl := getEnv("DATABASE_URL")
-	dbpool := model.GetDbPool(dbUrl)
+	dbpool := db.GetDbPool(dbUrl)
 	defer dbpool.Close()
 
 	var name string

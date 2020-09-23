@@ -1,4 +1,4 @@
-package model
+package db
 
 import (
 	"os"
@@ -16,3 +16,4 @@ func GetDbPool(dbUrl string) *pgxpool.Pool {
 	}
 	return dbpool
 }
+
