@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"context"
 
 	"github.com/tammiec/go-rest-api/model"
 )
@@ -30,11 +32,12 @@ func getEnv(key string) string {
 }
 
 func main() {
-	dbpool := model.GetDbPool(getEnv('DATABASE_URL'))
+	dbUrl := getEnv("DATABASE_URL")
+	dbpool := model.GetDbPool(dbUrl)
 	defer dbpool.Close()
 
 	var name string
-	err = dbpool.QueryRow(context.Background(), "SELECT name FROM users WHERE id=5").Scan(&name)
+	err := dbpool.QueryRow(context.Background(), "SELECT name FROM users WHERE id=5").Scan(&name)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
 		os.Exit(1)
