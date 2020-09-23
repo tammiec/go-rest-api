@@ -7,7 +7,7 @@ import (
 	"os"
 	"context"
 
-	"github.com/tammiec/go-rest-api/db"
+	"go-rest-api/db"
 )
 
 func homePage(w http.ResponseWriter, r *http.Request){
