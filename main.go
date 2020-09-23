@@ -5,18 +5,27 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"context"
 
 	"go-rest-api/db"
+	"github.com/jackc/pgx/v4/pgxpool"
 )
 
-func homePage(w http.ResponseWriter, r *http.Request){
+func homePage(w http.ResponseWriter, r *http.Request) {
     fmt.Fprintf(w, "Hello World!")
     fmt.Println("Endpoint Hit: homePage")
 }
 
-func handleRequests() {
+func getUsers(w http.ResponseWriter, r *http.Request, dbpool *pgxpool.Pool) {
+	users := db.GetUsers(dbpool)
+	fmt.Fprintf(w, users)
+}
+
+func handleRequests(dbpool *pgxpool.Pool) {
 	http.HandleFunc("/", homePage)
+	http.HandleFunc("/users", func(w http.ResponseWriter, r *http.Request) {
+		getUsers(w, r, dbpool)
+	})
+
 	fmt.Println("Now listening at port 8000")
     log.Fatal(http.ListenAndServe(":8000", nil))
 }
@@ -35,14 +44,6 @@ func main() {
 	dbUrl := getEnv("DATABASE_URL")
 	dbpool := db.GetDbPool(dbUrl)
 	defer dbpool.Close()
-
-	var name string
-	err := dbpool.QueryRow(context.Background(), "SELECT name FROM users WHERE id=5").Scan(&name)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
-		os.Exit(1)
-	}
-	fmt.Println(name)
 	
-	handleRequests()
+	handleRequests(dbpool)
 }
