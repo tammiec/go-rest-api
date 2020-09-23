@@ -3,11 +3,9 @@ package main
 import (
 	"fmt"
 	"log"
-	"os"
 	"net/http"
-	"context"
 
-	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/tammiec/go-rest-api/model"
 )
 
 func homePage(w http.ResponseWriter, r *http.Request){
@@ -32,11 +30,7 @@ func getEnv(key string) string {
 }
 
 func main() {
-	dbpool, err := pgxpool.Connect(context.Background(), getEnv("DATABASE_URL"))
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
-		os.Exit(1)
-	}
+	dbpool := model.GetDbPool(getEnv('DATABASE_URL'))
 	defer dbpool.Close()
 
 	var name string
