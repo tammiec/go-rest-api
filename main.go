@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"encoding/json"
+	"sync"
 
 	"go-rest-api/db"
 	"github.com/jackc/pgx/v4/pgxpool"
@@ -36,15 +37,22 @@ func getUser(w http.ResponseWriter, r *http.Request, dbpool *pgxpool.Pool, id in
 }
 
 func handleRequests(dbpool *pgxpool.Pool) {
-	http.HandleFunc("/users", func(w http.ResponseWriter, r *http.Request) {
-		getUsers(w, r, dbpool)
-	})
-	http.HandleFunc("/users/5", func(w http.ResponseWriter, r *http.Request) {
-		getUser(w, r, dbpool, 5)
-	})
+	wg := new(sync.WaitGroup)
+	wg.Add(1)
 
-	fmt.Println("Now listening at port 8000")
-    log.Fatal(http.ListenAndServe(":8000", nil))
+	go func() {
+		http.HandleFunc("/users", func(w http.ResponseWriter, r *http.Request) {
+			getUsers(w, r, dbpool)
+		})
+		http.HandleFunc("/users/5", func(w http.ResponseWriter, r *http.Request) {
+			getUser(w, r, dbpool, 5)
+		})
+	
+		fmt.Println("Now listening at port 8000")
+		log.Fatal(http.ListenAndServe(":8000", nil))
+	}()
+	
+	wg.Wait()
 }
 
 func getEnv(key string) string {
