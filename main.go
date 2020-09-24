@@ -23,9 +23,24 @@ func getUsers(w http.ResponseWriter, r *http.Request, dbpool *pgxpool.Pool) {
 	w.Write(body)
 }
 
+func getUser(w http.ResponseWriter, r *http.Request, dbpool *pgxpool.Pool, id int) {
+	user := db.GetUser(dbpool, id)
+	var body []byte
+	body, err := json.Marshal(user)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	w.Write(body)
+}
+
 func handleRequests(dbpool *pgxpool.Pool) {
 	http.HandleFunc("/users", func(w http.ResponseWriter, r *http.Request) {
 		getUsers(w, r, dbpool)
+	})
+	http.HandleFunc("/users/5", func(w http.ResponseWriter, r *http.Request) {
+		getUser(w, r, dbpool, 5)
 	})
 
 	fmt.Println("Now listening at port 8000")

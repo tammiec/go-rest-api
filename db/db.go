@@ -44,3 +44,13 @@ func GetUsers(dbpool *pgxpool.Pool) []*User {
 	}
 	return users
 }
+
+func GetUser(dbpool *pgxpool.Pool, id int) *User {
+	user := &User{}
+	err := dbpool.QueryRow(context.Background(), fmt.Sprintf("SELECT id, name, email, password FROM users WHERE id=%v", id)).Scan(&user.Id, &user.Name, &user.Email, &user.Password)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Row error: %v\n", err)
+		os.Exit(1)
+	}
+	return user
+}
