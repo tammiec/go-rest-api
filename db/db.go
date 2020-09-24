@@ -8,6 +8,13 @@ import (
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
+type User struct {
+	Id int
+	Name string
+	Email string
+	Password string
+}
+
 func GetDbPool(dbUrl string) *pgxpool.Pool {
 	dbpool, err := pgxpool.Connect(context.Background(), dbUrl)
 	if err != nil {
@@ -17,12 +24,23 @@ func GetDbPool(dbUrl string) *pgxpool.Pool {
 	return dbpool
 }
 
-func GetUsers(dbpool *pgxpool.Pool) string {
-	var name string
-	err := dbpool.QueryRow(context.Background(), "SELECT name FROM users WHERE id=5").Scan(&name)
+func GetUsers(dbpool *pgxpool.Pool) []*User {
+	users := make([]*User, 0)
+	rows, err := dbpool.Query(context.Background(), "SELECT id, name, email, password FROM users")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Query failed: %v\n", err)
 		os.Exit(1)
 	}
-	return name
+	defer rows.Close()
+
+	for rows.Next() {
+		user := &User{}
+		err := rows.Scan(&user.Id, &user.Name, &user.Email, &user.Password)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Row error: %v\n", err)
+			os.Exit(1)
+		}
+		users = append(users, user)
+	}
+	return users
 }
