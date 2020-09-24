@@ -5,23 +5,25 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"encoding/json"
 
 	"go-rest-api/db"
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
-func homePage(w http.ResponseWriter, r *http.Request) {
-    fmt.Fprintf(w, "Hello World!")
-    fmt.Println("Endpoint Hit: homePage")
-}
-
 func getUsers(w http.ResponseWriter, r *http.Request, dbpool *pgxpool.Pool) {
 	users := db.GetUsers(dbpool)
-	fmt.Fprintf(w, users)
+	var body []byte
+	body, err := json.Marshal(users)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	w.Write(body)
 }
 
 func handleRequests(dbpool *pgxpool.Pool) {
-	http.HandleFunc("/", homePage)
 	http.HandleFunc("/users", func(w http.ResponseWriter, r *http.Request) {
 		getUsers(w, r, dbpool)
 	})
