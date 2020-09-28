@@ -54,3 +54,13 @@ func GetUser(dbpool *pgxpool.Pool, id int) *User {
 	}
 	return user
 }
+
+func DeleteUser(dbpool *pgxpool.Pool, id int) *User {
+	user := &User{}
+	err := dbpool.QueryRow(context.Background(), fmt.Sprintf("DELETE FROM users WHERE id=%v RETURNING id, name, email, password", id)).Scan(&user.Id, &user.Name, &user.Email, &user.Password)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Row error: %v\n", err)
+		os.Exit(1)
+	}
+	return user
+}

@@ -37,6 +37,18 @@ func getUser(w http.ResponseWriter, r *http.Request, dbpool *pgxpool.Pool, id in
 	w.Write(body)
 }
 
+func deleteUser(w http.ResponseWriter, r *http.Request, dbpool *pgxpool.Pool, id int) {
+	user := db.DeleteUser(dbpool, id)
+	var body []byte
+	body, err := json.Marshal(user)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	w.Write(body)
+}
+
 func validateId(idString string, w http.ResponseWriter) int {
 	id, err := strconv.Atoi(idString)
 	if err != nil {
@@ -53,8 +65,12 @@ func handleRequests(dbpool *pgxpool.Pool) {
 	})
 	router.HandleFunc("/users/{id:[0-9]+}", func(w http.ResponseWriter, r *http.Request) {
 		id := validateId(mux.Vars(r)["id"], w)
-		getUser(w, r, dbpool, id)
-	})
+		if r.Method == http.MethodGet {
+			getUser(w, r, dbpool, id)
+		} else if r.Method == http.MethodDelete {
+			deleteUser(w, r, dbpool, id)
+		}
+	}).Methods(http.MethodGet, http.MethodDelete)
 
 	fmt.Println("Now listening at port 8000")
 	log.Fatal(http.ListenAndServe(":8000", router))
