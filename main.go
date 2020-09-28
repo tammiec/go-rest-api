@@ -6,10 +6,11 @@ import (
 	"net/http"
 	"os"
 	"encoding/json"
-	"sync"
+	"strconv"
 
 	"go-rest-api/db"
 	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/gorilla/mux"
 )
 
 func getUsers(w http.ResponseWriter, r *http.Request, dbpool *pgxpool.Pool) {
@@ -36,23 +37,27 @@ func getUser(w http.ResponseWriter, r *http.Request, dbpool *pgxpool.Pool, id in
 	w.Write(body)
 }
 
-func handleRequests(dbpool *pgxpool.Pool) {
-	wg := new(sync.WaitGroup)
-	wg.Add(1)
+func validateId(idString string, w http.ResponseWriter) int {
+	id, err := strconv.Atoi(idString)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), 500)
+	}
+	return id
+}
 
-	go func() {
-		http.HandleFunc("/users", func(w http.ResponseWriter, r *http.Request) {
-			getUsers(w, r, dbpool)
-		})
-		http.HandleFunc("/users/5", func(w http.ResponseWriter, r *http.Request) {
-			getUser(w, r, dbpool, 5)
-		})
-	
-		fmt.Println("Now listening at port 8000")
-		log.Fatal(http.ListenAndServe(":8000", nil))
-	}()
-	
-	wg.Wait()
+func handleRequests(dbpool *pgxpool.Pool) {
+	router := mux.NewRouter()
+	router.HandleFunc("/users", func(w http.ResponseWriter, r *http.Request) {
+		getUsers(w, r, dbpool)
+	})
+	router.HandleFunc("/users/{id:[0-9]+}", func(w http.ResponseWriter, r *http.Request) {
+		id := validateId(mux.Vars(r)["id"], w)
+		getUser(w, r, dbpool, id)
+	})
+
+	fmt.Println("Now listening at port 8000")
+	log.Fatal(http.ListenAndServe(":8000", router))
 }
 
 func getEnv(key string) string {
