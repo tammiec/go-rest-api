@@ -14,9 +14,19 @@ import (
 )
 
 func getUsers(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-	users := model.GetUsers(db)
+	users, err := model.GetUsers(db)
+	if err != nil {
+		log.Println(err)
+		switch err {
+		case sql.ErrNoRows:
+			http.Error(w, err.Error(), 404)
+		default:
+			http.Error(w, err.Error(), 500)
+		}
+		return
+	}
 	var body []byte
-	body, err := json.Marshal(users)
+	body, err = json.Marshal(users)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), 500)
@@ -26,9 +36,19 @@ func getUsers(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 }
 
 func getUser(w http.ResponseWriter, r *http.Request, db *sql.DB, id int) {
-	user := model.GetUser(db, id)
+	user, err := model.GetUser(db, id)
+	if err != nil {
+		log.Println(err)
+		switch err {
+		case sql.ErrNoRows:
+			http.Error(w, err.Error(), 404)
+		default:
+			http.Error(w, err.Error(), 500)
+		}
+		return
+	}
 	var body []byte
-	body, err := json.Marshal(user)
+	body, err = json.Marshal(user)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), 500)
@@ -38,9 +58,19 @@ func getUser(w http.ResponseWriter, r *http.Request, db *sql.DB, id int) {
 }
 
 func deleteUser(w http.ResponseWriter, r *http.Request, db *sql.DB, id int) {
-	user := model.DeleteUser(db, id)
+	user, err := model.DeleteUser(db, id)
+	if err != nil {
+		log.Println(err)
+		switch err {
+		case sql.ErrNoRows:
+			http.Error(w, err.Error(), 404)
+		default:
+			http.Error(w, err.Error(), 500)
+		}
+		return
+	}
 	var body []byte
-	body, err := json.Marshal(user)
+	body, err = json.Marshal(user)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), 500)

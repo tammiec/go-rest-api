@@ -24,12 +24,11 @@ func GetDb(dbUrl string) *sql.DB {
 	return db
 }
 
-func GetUsers(db *sql.DB) []*User {
+func GetUsers(db *sql.DB) ([]*User, error) {
 	users := make([]*User, 0)
 	rows, err := db.Query("SELECT id, name, email, password FROM users")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Query failed: %v\n", err)
-		os.Exit(1)
+		return nil, err
 	}
 	defer rows.Close()
 
@@ -37,38 +36,37 @@ func GetUsers(db *sql.DB) []*User {
 		user := &User{}
 		err := rows.Scan(&user.Id, &user.Name, &user.Email, &user.Password)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Row error: %v\n", err)
-			os.Exit(1)
+			return nil, err
 		}
 		users = append(users, user)
 	}
-	return users
+	return users, err
 }
 
-func GetUser(db *sql.DB, id int) *User {
+func GetUser(db *sql.DB, id int) (*User, error) {
 	user := &User{}
 	stmt, err := db.Prepare("SELECT id, name, email, password FROM users WHERE id=$1")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Row error: %v\n", err)
-		os.Exit(1)
+		return nil, err
 	}
 	defer stmt.Close()
 	err = stmt.QueryRow(id).Scan(&user.Id, &user.Name, &user.Email, &user.Password)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Row error: %v\n", err)
-		os.Exit(1)
+		return nil, err
 	}
-	return user
+	return user, err
 }
 
-func DeleteUser(db *sql.DB, id int) *User {
+func DeleteUser(db *sql.DB, id int) (*User, error) {
 	user := &User{}
 	stmt, err := db.Prepare("DELETE FROM users WHERE id=$1 RETURNING id, name, email, password")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Row error: %v\n", err)
-		os.Exit(1)
+		return nil, err
 	}
 	defer stmt.Close()
 	err = stmt.QueryRow(id).Scan(&user.Id, &user.Name, &user.Email, &user.Password)
-	return user
+	if err != nil {
+		return nil, err
+	}
+	return user, err
 }
