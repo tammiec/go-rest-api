@@ -10,21 +10,20 @@ import (
 	"database/sql"
 
 	"go-rest-api/model"
-	// "github.com/jackc/pgx/v4/pgxpool"
 	"github.com/gorilla/mux"
 )
 
-// func getUsers(w http.ResponseWriter, r *http.Request, dbpool *pgxpool.Pool) {
-// 	users := db.GetUsers(dbpool)
-// 	var body []byte
-// 	body, err := json.Marshal(users)
-// 	if err != nil {
-// 		log.Println(err)
-// 		http.Error(w, err.Error(), 500)
-// 		return
-// 	}
-// 	w.Write(body)
-// }
+func getUsers(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	users := model.GetUsers(db)
+	var body []byte
+	body, err := json.Marshal(users)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	w.Write(body)
+}
 
 func getUser(w http.ResponseWriter, r *http.Request, db *sql.DB, id int) {
 	user := model.GetUser(db, id)
@@ -38,17 +37,17 @@ func getUser(w http.ResponseWriter, r *http.Request, db *sql.DB, id int) {
 	w.Write(body)
 }
 
-// func deleteUser(w http.ResponseWriter, r *http.Request, dbpool *pgxpool.Pool, id int) {
-// 	user := db.DeleteUser(dbpool, id)
-// 	var body []byte
-// 	body, err := json.Marshal(user)
-// 	if err != nil {
-// 		log.Println(err)
-// 		http.Error(w, err.Error(), 500)
-// 		return
-// 	}
-// 	w.Write(body)
-// }
+func deleteUser(w http.ResponseWriter, r *http.Request, db *sql.DB, id int) {
+	user := model.DeleteUser(db, id)
+	var body []byte
+	body, err := json.Marshal(user)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	w.Write(body)
+}
 
 func validateId(idString string, w http.ResponseWriter) int {
 	id, err := strconv.Atoi(idString)
@@ -61,15 +60,15 @@ func validateId(idString string, w http.ResponseWriter) int {
 
 func handleRequests(db *sql.DB) {
 	router := mux.NewRouter()
-	// router.HandleFunc("/users", func(w http.ResponseWriter, r *http.Request) {
-	// 	getUsers(w, r, dbpool)
-	// })
+	router.HandleFunc("/users", func(w http.ResponseWriter, r *http.Request) {
+		getUsers(w, r, db)
+	})
 	router.HandleFunc("/users/{id:[0-9]+}", func(w http.ResponseWriter, r *http.Request) {
 		id := validateId(mux.Vars(r)["id"], w)
 		if r.Method == http.MethodGet {
 			getUser(w, r, db, id)
 		} else if r.Method == http.MethodDelete {
-			// deleteUser(w, r, dbpool, id)
+			deleteUser(w, r, db, id)
 		}
 	}).Methods(http.MethodGet, http.MethodDelete)
 
