@@ -79,6 +79,50 @@ func deleteUser(w http.ResponseWriter, r *http.Request, db *sql.DB, id int) {
 	w.Write(body)
 }
 
+func createUser(w http.ResponseWriter, r *http.Request, db *sql.DB, name string, email string, password string) {
+	user, err := model.CreateUser(db, name, email, password)
+	if err != nil {
+		log.Println(err)
+		switch err {
+		case sql.ErrNoRows:
+			http.Error(w, err.Error(), 404)
+		default:
+			http.Error(w, err.Error(), 500)
+		}
+		return
+	}
+	var body []byte
+	body, err = json.Marshal(user)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	w.Write(body)
+}
+
+func updateUser(w http.ResponseWriter, r *http.Request, db *sql.DB, id int, name string, email string, password string) {
+	user, err := model.UpdateUser(db, id, name, email, password)
+	if err != nil {
+		log.Println(err)
+		switch err {
+		case sql.ErrNoRows:
+			http.Error(w, err.Error(), 404)
+		default:
+			http.Error(w, err.Error(), 500)
+		}
+		return
+	}
+	var body []byte
+	body, err = json.Marshal(user)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	w.Write(body)
+}
+
 func validateId(idString string, w http.ResponseWriter) int {
 	id, err := strconv.Atoi(idString)
 	if err != nil {
@@ -91,16 +135,30 @@ func validateId(idString string, w http.ResponseWriter) int {
 func handleRequests(db *sql.DB) {
 	router := mux.NewRouter()
 	router.HandleFunc("/users", func(w http.ResponseWriter, r *http.Request) {
-		getUsers(w, r, db)
-	})
+		if r.Method == http.MethodGet {
+			getUsers(w, r, db)
+		} else if r.Method == http.MethodPost {
+			r.ParseForm()
+			name := r.Form["name"][0]
+			email := r.Form["email"][0]
+			password := r.Form["password"][0]
+			createUser(w, r, db, name, email, password)
+		}
+	}).Methods(http.MethodGet, http.MethodPost)
 	router.HandleFunc("/users/{id:[0-9]+}", func(w http.ResponseWriter, r *http.Request) {
 		id := validateId(mux.Vars(r)["id"], w)
 		if r.Method == http.MethodGet {
 			getUser(w, r, db, id)
 		} else if r.Method == http.MethodDelete {
 			deleteUser(w, r, db, id)
+		} else if r.Method == http.MethodPut {
+			r.ParseForm()
+			name := r.Form["name"][0]
+			email := r.Form["email"][0]
+			password := r.Form["password"][0]
+			updateUser(w, r, db, id, name, email, password)
 		}
-	}).Methods(http.MethodGet, http.MethodDelete)
+	}).Methods(http.MethodGet, http.MethodDelete, http.MethodPut)
 
 	fmt.Println("Now listening at port 8000")
 	log.Fatal(http.ListenAndServe(":8000", router))
