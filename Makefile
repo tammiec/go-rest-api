@@ -3,5 +3,5 @@ run:
 .PHONY: run
 
 test:
-	go test -v -coverprofile=cover.out ./...
+	go test -coverprofile=cover.out ./...
 .PHONY: test
