@@ -5,17 +5,34 @@ import (
 	"errors"
 	"os"
 	"testing"
+	"log"
+	"io/ioutil"
+	"fmt"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/require"
 )
 
-func getMockDB(t *testing.T) (*sql.DB, sqlmock.Sqlmock) {
+var (
+	db *sql.DB
+	mock sqlmock.Sqlmock
+)
+
+func getMockDB() (*sql.DB, sqlmock.Sqlmock) {
 	db, mock, err := sqlmock.New()
 	if err != nil {
-		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		panic(fmt.Sprintf("an error '%s' was not expected when opening a stub database connection", err))
 	}
 	return db, mock
+}
+
+func TestMain(m *testing.M) {
+	log.SetOutput(ioutil.Discard)
+
+	db, mock = getMockDB()
+	defer db.Close()
+
+	os.Exit(m.Run())
 }
 
 func TestGetDb(t *testing.T) {
@@ -25,12 +42,9 @@ func TestGetDb(t *testing.T) {
 }
 
 func TestGetUsersSuccessfully(t *testing.T) {
-	db, mock := getMockDB(t)
-	defer db.Close()
-
-	rows := mock.NewRows([]string{"id", "name", "email", "password"})
-	rows.AddRow("1", "Kaladin", "k@s.com", "password")
-	rows.AddRow("2", "Adolin", "a@k.com", "password")
+	rows := mock.NewRows([]string{"id", "name", "email"})
+	rows.AddRow("1", "Kaladin", "k@s.com")
+	rows.AddRow("2", "Adolin", "a@k.com")
 	mock.ExpectQuery("SELECT").WillReturnRows(rows)
 
 	result, err := GetUsers(db)
@@ -39,32 +53,118 @@ func TestGetUsersSuccessfully(t *testing.T) {
 	require.Equal(t, 1, result[0].Id)
 	require.Equal(t, "Kaladin", result[0].Name)
 	require.Equal(t, "k@s.com", result[0].Email)
-	require.Equal(t, "password", result[0].Password)
 	require.Equal(t, "Adolin", result[1].Name)
 	require.Equal(t, "a@k.com", result[1].Email)
-	require.Equal(t, "password", result[1].Password)
 }
 
-func TestGetFieldSettingsQueryError(t *testing.T) {
-	db, mock := getMockDB(t)
-	defer db.Close()
-
+func TestGetUsersQueryError(t *testing.T) {
 	mock.ExpectQuery("SELECT").WillReturnError(errors.New("Mock Error"))
+	
 	_, err := GetUsers(db)
 	
 	require.Equal(t, "Mock Error", err.Error())
 }
 
-func TestGetFieldSettingsQueryBadRow(t *testing.T) {
-	db, mock := getMockDB(t)
-	defer db.Close()
-
-	rows := mock.NewRows([]string{"id", "name", "email", "password"})
-	rows.AddRow("1", "Kaladin", 1, "password")
-	rows.AddRow("2", "Adolin", "a@k.com", nil)
+func TestGetUsersQueryBadRow(t *testing.T) {
+	rows := mock.NewRows([]string{"id", "name", "email"})
+	rows.AddRow("1", "Kaladin", nil)
 	mock.ExpectQuery("SELECT").WillReturnRows(rows)
 
 	_, err := GetUsers(db)
 
-	require.Equal(t, "sql: Scan error on column index 3, name \"password\": converting NULL to string is unsupported", err.Error())
+	require.Equal(t, "sql: Scan error on column index 2, name \"email\": converting NULL to string is unsupported", err.Error())
+}
+
+func TestGetUserSuccessfully(t *testing.T) {
+	mock.ExpectPrepare("SELECT")
+	rows := mock.NewRows([]string{"id", "name", "email"})
+	rows.AddRow("1", "Kaladin", "k@s.com")
+	mock.ExpectQuery("SELECT").WithArgs(1).WillReturnRows(rows)
+
+	result, err := GetUser(db, 1)
+
+	require.NoError(t, err)
+	require.Equal(t, 1, result.Id)
+	require.Equal(t, "Kaladin", result.Name)
+	require.Equal(t, "k@s.com", result.Email)
+}
+
+func TestGetUserQueryError(t *testing.T) {
+	mock.ExpectPrepare("SELECT")
+	mock.ExpectQuery("SELECT").WithArgs(1).WillReturnError(errors.New("Mock Error"))
+	
+	_, err := GetUser(db, 1)
+	
+	require.Equal(t, "Mock Error", err.Error())
+}
+
+func TestGetUserQueryBadRow(t *testing.T) {
+	mock.ExpectPrepare("SELECT")
+	rows := mock.NewRows([]string{"id", "name", "email"})
+	rows.AddRow("1", "Kaladin", nil)
+	mock.ExpectQuery("SELECT").WithArgs(1).WillReturnRows(rows)
+
+	_, err := GetUser(db, 1)
+
+	require.Equal(t, "sql: Scan error on column index 2, name \"email\": converting NULL to string is unsupported", err.Error())
+}
+
+func TestDeleteUserSuccessfully(t *testing.T) {
+	mock.ExpectPrepare("DELETE")
+	rows := mock.NewRows([]string{"id", "name", "email"})
+	rows.AddRow("1", "Kaladin", "k@s.com")
+	mock.ExpectQuery("DELETE").WithArgs(1).WillReturnRows(rows)
+
+	result, err := DeleteUser(db, 1)
+
+	require.NoError(t, err)
+	require.Equal(t, 1, result.Id)
+	require.Equal(t, "Kaladin", result.Name)
+	require.Equal(t, "k@s.com", result.Email)
+}
+
+func TestDeleteUserQueryError(t *testing.T) {
+	mock.ExpectPrepare("DELETE")
+	mock.ExpectQuery("DELETE").WithArgs(1).WillReturnError(errors.New("Mock Error"))
+	
+	_, err := DeleteUser(db, 1)
+	
+	require.Equal(t, "Mock Error", err.Error())
+}
+
+func TestDeleteUserQueryInvalidUser(t *testing.T) {
+	mock.ExpectPrepare("DELETE")
+	rows := mock.NewRows([]string{"id", "name", "email"})
+	rows.AddRow("1", "Kaladin", "k@s.com")
+	mock.ExpectQuery("DELETE").WithArgs(2).WillReturnError(errors.New("User doesn't exist"))
+
+	_, err := DeleteUser(db, 2)
+
+	require.Equal(t, "User doesn't exist", err.Error())
+}
+
+func TestCreateUserSuccessfully(t *testing.T) {
+	mock.ExpectPrepare("INSERT")
+	rows := mock.NewRows([]string{"name", "email", "password"})
+	rows.AddRow(1, "Kaladin", "k@s.com")
+	mock.ExpectQuery("INSERT").WithArgs("Kaladin", "k@s.com", "password").WillReturnRows(rows)
+
+	result, err := CreateUser(db, "Kaladin", "k@s.com", "password")
+
+	require.NoError(t, err)
+	require.Equal(t, "Kaladin", result.Name)
+	require.Equal(t, "k@s.com", result.Email)
+}
+
+func TestUpdateUserSuccessfully(t *testing.T) {
+	mock.ExpectPrepare("UPDATE")
+	rows := mock.NewRows([]string{"id", "name", "email"})
+	rows.AddRow(1, "Kaladin", "k@s.com")
+	mock.ExpectQuery("UPDATE").WithArgs("Kaladin", "k@s.com", "password", 1).WillReturnRows(rows)
+
+	result, err := UpdateUser(db, 1, "Kaladin", "k@s.com", "password")
+
+	require.NoError(t, err)
+	require.Equal(t, "Kaladin", result.Name)
+	require.Equal(t, "k@s.com", result.Email)
 }
