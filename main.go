@@ -132,16 +132,21 @@ func validateId(idString string, w http.ResponseWriter) int {
 	return id
 }
 
+func parseRequest(r *http.Request) (string, string, string) {
+	r.ParseForm()
+	name := r.Form["name"][0]
+	email := r.Form["email"][0]
+	password := r.Form["password"][0]
+	return name, email, password
+}
+
 func handleRequests(db *sql.DB) {
 	router := mux.NewRouter()
 	router.HandleFunc("/users", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
 			getUsers(w, r, db)
 		} else if r.Method == http.MethodPost {
-			r.ParseForm()
-			name := r.Form["name"][0]
-			email := r.Form["email"][0]
-			password := r.Form["password"][0]
+			name, email, password := parseRequest(r)
 			createUser(w, r, db, name, email, password)
 		}
 	}).Methods(http.MethodGet, http.MethodPost)
@@ -152,10 +157,7 @@ func handleRequests(db *sql.DB) {
 		} else if r.Method == http.MethodDelete {
 			deleteUser(w, r, db, id)
 		} else if r.Method == http.MethodPut {
-			r.ParseForm()
-			name := r.Form["name"][0]
-			email := r.Form["email"][0]
-			password := r.Form["password"][0]
+			name, email, password := parseRequest(r)
 			updateUser(w, r, db, id, name, email, password)
 		}
 	}).Methods(http.MethodGet, http.MethodDelete, http.MethodPut)
