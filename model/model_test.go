@@ -5,17 +5,10 @@ import (
 	"errors"
 	"os"
 	"testing"
-	"log"
-	"io/ioutil"
 	"fmt"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/require"
-)
-
-var (
-	db *sql.DB
-	mock sqlmock.Sqlmock
 )
 
 func getMockDB() (*sql.DB, sqlmock.Sqlmock) {
@@ -26,15 +19,6 @@ func getMockDB() (*sql.DB, sqlmock.Sqlmock) {
 	return db, mock
 }
 
-func TestMain(m *testing.M) {
-	log.SetOutput(ioutil.Discard)
-
-	db, mock = getMockDB()
-	defer db.Close()
-
-	os.Exit(m.Run())
-}
-
 func TestGetDb(t *testing.T) {
 	url, _ := os.LookupEnv("DATABASE_URL")
 	db := GetDb(url)
@@ -42,6 +26,9 @@ func TestGetDb(t *testing.T) {
 }
 
 func TestGetUsersSuccessfully(t *testing.T) {
+	db, mock := getMockDB()
+	defer db.Close()
+
 	rows := mock.NewRows([]string{"id", "name", "email"})
 	rows.AddRow("1", "Kaladin", "k@s.com")
 	rows.AddRow("2", "Adolin", "a@k.com")
@@ -58,6 +45,9 @@ func TestGetUsersSuccessfully(t *testing.T) {
 }
 
 func TestGetUsersQueryError(t *testing.T) {
+	db, mock := getMockDB()
+	defer db.Close()
+
 	mock.ExpectQuery("SELECT").WillReturnError(errors.New("Mock Error"))
 	
 	_, err := GetUsers(db)
@@ -66,6 +56,9 @@ func TestGetUsersQueryError(t *testing.T) {
 }
 
 func TestGetUsersQueryBadRow(t *testing.T) {
+	db, mock := getMockDB()
+	defer db.Close()
+
 	rows := mock.NewRows([]string{"id", "name", "email"})
 	rows.AddRow("1", "Kaladin", nil)
 	mock.ExpectQuery("SELECT").WillReturnRows(rows)
@@ -76,6 +69,9 @@ func TestGetUsersQueryBadRow(t *testing.T) {
 }
 
 func TestGetUserSuccessfully(t *testing.T) {
+	db, mock := getMockDB()
+	defer db.Close()
+
 	mock.ExpectPrepare("SELECT")
 	rows := mock.NewRows([]string{"id", "name", "email"})
 	rows.AddRow("1", "Kaladin", "k@s.com")
@@ -90,6 +86,9 @@ func TestGetUserSuccessfully(t *testing.T) {
 }
 
 func TestGetUserQueryError(t *testing.T) {
+	db, mock := getMockDB()
+	defer db.Close()
+
 	mock.ExpectPrepare("SELECT")
 	mock.ExpectQuery("SELECT").WithArgs(1).WillReturnError(errors.New("Mock Error"))
 	
@@ -99,6 +98,9 @@ func TestGetUserQueryError(t *testing.T) {
 }
 
 func TestGetUserQueryBadRow(t *testing.T) {
+	db, mock := getMockDB()
+	defer db.Close()
+
 	mock.ExpectPrepare("SELECT")
 	rows := mock.NewRows([]string{"id", "name", "email"})
 	rows.AddRow("1", "Kaladin", nil)
@@ -109,7 +111,24 @@ func TestGetUserQueryBadRow(t *testing.T) {
 	require.Equal(t, "sql: Scan error on column index 2, name \"email\": converting NULL to string is unsupported", err.Error())
 }
 
+func TestGetUserQueryBadArg(t *testing.T) {
+	db, mock := getMockDB()
+	defer db.Close()
+
+	mock.ExpectPrepare("SELECT")
+	rows := mock.NewRows([]string{"id", "name", "email"})
+	rows.AddRow("1", "Kaladin", "k@s.com")
+	mock.ExpectQuery("SELECT").WithArgs("asdf").WillReturnError(errors.New("Query 'SELECT id, name, email FROM users WHERE id=$1', arguments do not match: argument 0 expected [string - asdf] does not match actual [int64 - 1]"))
+
+	_, err := GetUser(db, 1)
+
+	require.Equal(t, "Query 'SELECT id, name, email FROM users WHERE id=$1', arguments do not match: argument 0 expected [string - asdf] does not match actual [int64 - 1]", err.Error())
+}
+
 func TestDeleteUserSuccessfully(t *testing.T) {
+	db, mock := getMockDB()
+	defer db.Close()
+
 	mock.ExpectPrepare("DELETE")
 	rows := mock.NewRows([]string{"id", "name", "email"})
 	rows.AddRow("1", "Kaladin", "k@s.com")
@@ -124,6 +143,9 @@ func TestDeleteUserSuccessfully(t *testing.T) {
 }
 
 func TestDeleteUserQueryError(t *testing.T) {
+	db, mock := getMockDB()
+	defer db.Close()
+
 	mock.ExpectPrepare("DELETE")
 	mock.ExpectQuery("DELETE").WithArgs(1).WillReturnError(errors.New("Mock Error"))
 	
@@ -133,6 +155,9 @@ func TestDeleteUserQueryError(t *testing.T) {
 }
 
 func TestDeleteUserQueryInvalidUser(t *testing.T) {
+	db, mock := getMockDB()
+	defer db.Close()
+
 	mock.ExpectPrepare("DELETE")
 	rows := mock.NewRows([]string{"id", "name", "email"})
 	rows.AddRow("1", "Kaladin", "k@s.com")
@@ -144,6 +169,9 @@ func TestDeleteUserQueryInvalidUser(t *testing.T) {
 }
 
 func TestCreateUserSuccessfully(t *testing.T) {
+	db, mock := getMockDB()
+	defer db.Close()
+
 	mock.ExpectPrepare("INSERT")
 	rows := mock.NewRows([]string{"name", "email", "password"})
 	rows.AddRow(1, "Kaladin", "k@s.com")
@@ -157,6 +185,9 @@ func TestCreateUserSuccessfully(t *testing.T) {
 }
 
 func TestUpdateUserSuccessfully(t *testing.T) {
+	db, mock := getMockDB()
+	defer db.Close()
+	
 	mock.ExpectPrepare("UPDATE")
 	rows := mock.NewRows([]string{"id", "name", "email"})
 	rows.AddRow(1, "Kaladin", "k@s.com")
