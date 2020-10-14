@@ -52,6 +52,7 @@ func TestGetUsersQueryError(t *testing.T) {
 	
 	_, err := GetUsers(db)
 	
+	require.Error(t, err)
 	require.Equal(t, "Mock Error", err.Error())
 }
 
@@ -65,6 +66,7 @@ func TestGetUsersQueryBadRow(t *testing.T) {
 
 	_, err := GetUsers(db)
 
+	require.Error(t, err)
 	require.Equal(t, "sql: Scan error on column index 2, name \"email\": converting NULL to string is unsupported", err.Error())
 }
 
@@ -94,6 +96,7 @@ func TestGetUserQueryError(t *testing.T) {
 	
 	_, err := GetUser(db, 1)
 	
+	require.Error(t, err)
 	require.Equal(t, "Mock Error", err.Error())
 }
 
@@ -108,6 +111,7 @@ func TestGetUserQueryBadRow(t *testing.T) {
 
 	_, err := GetUser(db, 1)
 
+	require.Error(t, err)
 	require.Equal(t, "sql: Scan error on column index 2, name \"email\": converting NULL to string is unsupported", err.Error())
 }
 
@@ -122,6 +126,7 @@ func TestGetUserQueryBadArg(t *testing.T) {
 
 	_, err := GetUser(db, 1)
 
+	require.Error(t, err)
 	require.Equal(t, "Query 'SELECT id, name, email FROM users WHERE id=$1', arguments do not match: argument 0 expected [string - asdf] does not match actual [int64 - 1]", err.Error())
 }
 
@@ -151,6 +156,7 @@ func TestDeleteUserQueryError(t *testing.T) {
 	
 	_, err := DeleteUser(db, 1)
 	
+	require.Error(t, err)
 	require.Equal(t, "Mock Error", err.Error())
 }
 
@@ -165,6 +171,7 @@ func TestDeleteUserQueryInvalidUser(t *testing.T) {
 
 	_, err := DeleteUser(db, 2)
 
+	require.Error(t, err)
 	require.Equal(t, "User doesn't exist", err.Error())
 }
 
