@@ -3,9 +3,9 @@ package model
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"os"
 	"testing"
-	"fmt"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/require"
@@ -49,9 +49,9 @@ func TestGetUsersQueryError(t *testing.T) {
 	defer db.Close()
 
 	mock.ExpectQuery("SELECT").WillReturnError(errors.New("Mock Error"))
-	
+
 	_, err := GetUsers(db)
-	
+
 	require.Error(t, err)
 	require.Equal(t, "Mock Error", err.Error())
 }
@@ -93,9 +93,9 @@ func TestGetUserQueryError(t *testing.T) {
 
 	mock.ExpectPrepare("SELECT")
 	mock.ExpectQuery("SELECT").WithArgs(1).WillReturnError(errors.New("Mock Error"))
-	
+
 	_, err := GetUser(db, 1)
-	
+
 	require.Error(t, err)
 	require.Equal(t, "Mock Error", err.Error())
 }
@@ -115,21 +115,6 @@ func TestGetUserQueryBadRow(t *testing.T) {
 	require.Equal(t, "sql: Scan error on column index 2, name \"email\": converting NULL to string is unsupported", err.Error())
 }
 
-func TestGetUserQueryBadArg(t *testing.T) {
-	db, mock := getMockDB()
-	defer db.Close()
-
-	mock.ExpectPrepare("SELECT")
-	rows := mock.NewRows([]string{"id", "name", "email"})
-	rows.AddRow("1", "Kaladin", "k@s.com")
-	mock.ExpectQuery("SELECT").WithArgs("asdf").WillReturnError(errors.New("Query 'SELECT id, name, email FROM users WHERE id=$1', arguments do not match: argument 0 expected [string - asdf] does not match actual [int64 - 1]"))
-
-	_, err := GetUser(db, 1)
-
-	require.Error(t, err)
-	require.Equal(t, "Query 'SELECT id, name, email FROM users WHERE id=$1', arguments do not match: argument 0 expected [string - asdf] does not match actual [int64 - 1]", err.Error())
-}
-
 func TestDeleteUserSuccessfully(t *testing.T) {
 	db, mock := getMockDB()
 	defer db.Close()
@@ -147,19 +132,6 @@ func TestDeleteUserSuccessfully(t *testing.T) {
 	require.Equal(t, "k@s.com", result.Email)
 }
 
-func TestDeleteUserQueryError(t *testing.T) {
-	db, mock := getMockDB()
-	defer db.Close()
-
-	mock.ExpectPrepare("DELETE")
-	mock.ExpectQuery("DELETE").WithArgs(1).WillReturnError(errors.New("Mock Error"))
-	
-	_, err := DeleteUser(db, 1)
-	
-	require.Error(t, err)
-	require.Equal(t, "Mock Error", err.Error())
-}
-
 func TestDeleteUserQueryInvalidUser(t *testing.T) {
 	db, mock := getMockDB()
 	defer db.Close()
@@ -167,12 +139,12 @@ func TestDeleteUserQueryInvalidUser(t *testing.T) {
 	mock.ExpectPrepare("DELETE")
 	rows := mock.NewRows([]string{"id", "name", "email"})
 	rows.AddRow("1", "Kaladin", "k@s.com")
-	mock.ExpectQuery("DELETE").WithArgs(2).WillReturnError(errors.New("User doesn't exist"))
+	mock.ExpectQuery("DELETE").WithArgs(2).WillReturnError(errors.New("sql: no rows in result set"))
 
 	_, err := DeleteUser(db, 2)
 
 	require.Error(t, err)
-	require.Equal(t, "User doesn't exist", err.Error())
+	require.Equal(t, "sql: no rows in result set", err.Error())
 }
 
 func TestCreateUserSuccessfully(t *testing.T) {
@@ -194,7 +166,7 @@ func TestCreateUserSuccessfully(t *testing.T) {
 func TestUpdateUserSuccessfully(t *testing.T) {
 	db, mock := getMockDB()
 	defer db.Close()
-	
+
 	mock.ExpectPrepare("UPDATE")
 	rows := mock.NewRows([]string{"id", "name", "email"})
 	rows.AddRow(1, "Kaladin", "k@s.com")
@@ -205,4 +177,20 @@ func TestUpdateUserSuccessfully(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "Kaladin", result.Name)
 	require.Equal(t, "k@s.com", result.Email)
+}
+
+func TestUpdateUserInvalidUser(t *testing.T) {
+	db, mock := getMockDB()
+	defer db.Close()
+
+	mock.ExpectPrepare("UPDATE")
+	rows := mock.NewRows([]string{"id", "name", "email"})
+	rows.AddRow(1, "Kaladin", "k@s.com")
+	mock.ExpectQuery("UPDATE").WithArgs("Kaladin", "k@s.com", "password", 2).WillReturnError(errors.New("sql: no rows in result set"))
+
+	_, err := UpdateUser(db, 2, "Kaladin", "k@s.com", "password")
+
+	require.Error(t, err)
+	require.Equal(t, "sql: no rows in result set", err.Error())
+
 }
