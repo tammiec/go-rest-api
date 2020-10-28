@@ -1,19 +1,28 @@
 package main
 
 import (
+	"database/sql"
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
-	"encoding/json"
 	"strconv"
-	"database/sql"
 
 	"go-rest-api/model"
+
 	"github.com/gorilla/mux"
 )
 
-func getUsers(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func readinessHandler(w http.ResponseWriter, r *http.Request) {
+	// TODO: add a DB ping check
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	io.WriteString(w, `{"hello": world}`)
+}
+
+func getUsersHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	users, err := model.GetUsers(db)
 	if err != nil {
 		log.Println(err)
@@ -35,7 +44,7 @@ func getUsers(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	w.Write(body)
 }
 
-func getUser(w http.ResponseWriter, r *http.Request, db *sql.DB, id int) {
+func getUserHandler(w http.ResponseWriter, r *http.Request, db *sql.DB, id int) {
 	user, err := model.GetUser(db, id)
 	if err != nil {
 		log.Println(err)
@@ -57,7 +66,7 @@ func getUser(w http.ResponseWriter, r *http.Request, db *sql.DB, id int) {
 	w.Write(body)
 }
 
-func deleteUser(w http.ResponseWriter, r *http.Request, db *sql.DB, id int) {
+func deleteUserHandler(w http.ResponseWriter, r *http.Request, db *sql.DB, id int) {
 	user, err := model.DeleteUser(db, id)
 	if err != nil {
 		log.Println(err)
@@ -79,7 +88,7 @@ func deleteUser(w http.ResponseWriter, r *http.Request, db *sql.DB, id int) {
 	w.Write(body)
 }
 
-func createUser(w http.ResponseWriter, r *http.Request, db *sql.DB, name string, email string, password string) {
+func createUserHandler(w http.ResponseWriter, r *http.Request, db *sql.DB, name string, email string, password string) {
 	user, err := model.CreateUser(db, name, email, password)
 	if err != nil {
 		log.Println(err)
@@ -101,7 +110,7 @@ func createUser(w http.ResponseWriter, r *http.Request, db *sql.DB, name string,
 	w.Write(body)
 }
 
-func updateUser(w http.ResponseWriter, r *http.Request, db *sql.DB, id int, name string, email string, password string) {
+func updateUserHandler(w http.ResponseWriter, r *http.Request, db *sql.DB, id int, name string, email string, password string) {
 	user, err := model.UpdateUser(db, id, name, email, password)
 	if err != nil {
 		log.Println(err)
@@ -142,23 +151,24 @@ func parseRequest(r *http.Request) (string, string, string) {
 
 func handleRequests(db *sql.DB) {
 	router := mux.NewRouter()
+	router.HandleFunc("/readiness", readinessHandler).Methods(http.MethodGet)
 	router.HandleFunc("/users", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
-			getUsers(w, r, db)
+			getUsersHandler(w, r, db)
 		} else if r.Method == http.MethodPost {
 			name, email, password := parseRequest(r)
-			createUser(w, r, db, name, email, password)
+			createUserHandler(w, r, db, name, email, password)
 		}
 	}).Methods(http.MethodGet, http.MethodPost)
 	router.HandleFunc("/users/{id:[0-9]+}", func(w http.ResponseWriter, r *http.Request) {
 		id := validateId(mux.Vars(r)["id"], w)
 		if r.Method == http.MethodGet {
-			getUser(w, r, db, id)
+			getUserHandler(w, r, db, id)
 		} else if r.Method == http.MethodDelete {
-			deleteUser(w, r, db, id)
+			deleteUserHandler(w, r, db, id)
 		} else if r.Method == http.MethodPut {
 			name, email, password := parseRequest(r)
-			updateUser(w, r, db, id, name, email, password)
+			updateUserHandler(w, r, db, id, name, email, password)
 		}
 	}).Methods(http.MethodGet, http.MethodDelete, http.MethodPut)
 
@@ -180,6 +190,6 @@ func main() {
 	dbUrl := getEnv("DATABASE_URL")
 	db := model.GetDb(dbUrl)
 	defer db.Close()
-	
+
 	handleRequests(db)
 }
