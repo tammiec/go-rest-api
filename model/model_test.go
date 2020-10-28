@@ -192,5 +192,4 @@ func TestUpdateUserInvalidUser(t *testing.T) {
 
 	require.Error(t, err)
 	require.Equal(t, "sql: no rows in result set", err.Error())
-
 }
