@@ -2,20 +2,39 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
+	"go-rest-api/model"
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/require"
 )
 
-func getMockDB() (*sql.DB, sqlmock.Sqlmock) {
+func httpRequest(router *mux.Router, method string, url string, headers map[string]string) ([]byte, *http.Response, error) {
+	request := httptest.NewRequest(method, url, nil)
+	for key, val := range headers {
+		request.Header.Set(key, val)
+	}
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, request)
+	resp := recorder.Result()
+	body, err := ioutil.ReadAll(recorder.Body)
+	return body, resp, err
+}
+
+func getMockDBAndRouter() (*sql.DB, sqlmock.Sqlmock, *mux.Router) {
 	db, mock, err := sqlmock.New()
 	if err != nil {
 		panic(fmt.Sprintf("an error '%s' was not expected when opening a stub database connection", err))
 	}
-	return db, mock
+	router := getRouter(db)
+	return db, mock, router
 }
 
 func TestGetEnvOk(t *testing.T) {
@@ -37,14 +56,106 @@ func TestGetEnvNotSet(t *testing.T) {
 	require.Panics(t, func() { getEnv(varname) })
 }
 
-// func httpRequest(method string, url string, headers map[string]string) ([]byte, *http.Response, error) {
-// 	request := httptest.NewRequest(method, url, nil)
-// 	for key, val := range headers {
-// 		request.Header.Set(key, val)
-// 	}
-// 	recorder := httptest.NewRecorder()
-// 	router.ServeHTTP(recorder, request)
-// 	resp := recorder.Result()
-// 	body, err := ioutil.ReadAll(recorder.Body)
-// 	return body, resp, err
-// }
+func TestHandleReadinessOk(t *testing.T) {
+	db, _, router := getMockDBAndRouter()
+	defer db.Close()
+	body, resp, err := httpRequest(router, http.MethodGet, "http://localhost:1234/readiness", nil)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode, string(body))
+	require.Equal(t, "Hello World", string(body))
+}
+
+func TestHandleGetUsersHttpOk(t *testing.T) {
+	db, mock, router := getMockDBAndRouter()
+	defer db.Close()
+	rows := mock.NewRows([]string{"id", "name", "email"})
+	rows.AddRow("1", "Kaladin", "k@s.com")
+	rows.AddRow("2", "Adolin", "a@k.com")
+	mock.ExpectQuery("SELECT").WillReturnRows(rows)
+
+	body, resp, err := httpRequest(router, http.MethodGet, "http://localhost:1234/users", nil)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode, string(body))
+	require.Equal(t, "[{\"Id\":1,\"Name\":\"Kaladin\",\"Email\":\"k@s.com\"},{\"Id\":2,\"Name\":\"Adolin\",\"Email\":\"a@k.com\"}]", string(body))
+
+	result := [2]model.User{}
+	err = json.Unmarshal(body, &result)
+	require.NoError(t, err, string(body))
+	require.Equal(t, "Kaladin", result[0].Name)
+}
+
+func TestHandleGetUserHttpOk(t *testing.T) {
+	db, mock, router := getMockDBAndRouter()
+	defer db.Close()
+	mock.ExpectPrepare("SELECT")
+	rows := mock.NewRows([]string{"id", "name", "email"})
+	rows.AddRow("1", "Kaladin", "k@s.com")
+	mock.ExpectQuery("SELECT").WithArgs(1).WillReturnRows(rows)
+
+	body, resp, err := httpRequest(router, http.MethodGet, "http://localhost:1234/users/1", nil)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode, string(body))
+	require.Equal(t, "{\"Id\":1,\"Name\":\"Kaladin\",\"Email\":\"k@s.com\"}", string(body))
+
+	result := &model.User{}
+	err = json.Unmarshal(body, &result)
+	require.NoError(t, err, string(body))
+	require.Equal(t, "Kaladin", result.Name)
+}
+
+func TestHandleDeleteUserHttpOk(t *testing.T) {
+	db, mock, router := getMockDBAndRouter()
+	defer db.Close()
+	mock.ExpectPrepare("DELETE")
+	rows := mock.NewRows([]string{"id", "name", "email"})
+	rows.AddRow("1", "Kaladin", "k@s.com")
+	mock.ExpectQuery("DELETE").WithArgs(1).WillReturnRows(rows)
+
+	body, resp, err := httpRequest(router, http.MethodDelete, "http://localhost:1234/users/1", nil)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode, string(body))
+	require.Equal(t, "{\"Id\":1,\"Name\":\"Kaladin\",\"Email\":\"k@s.com\"}", string(body))
+
+	result := &model.User{}
+	err = json.Unmarshal(body, &result)
+	require.NoError(t, err, string(body))
+	require.Equal(t, "Kaladin", result.Name)
+}
+
+func TestHandleCreateUserHttpOk(t *testing.T) {
+	db, mock, router := getMockDBAndRouter()
+	defer db.Close()
+	mock.ExpectPrepare("INSERT")
+	rows := mock.NewRows([]string{"name", "email", "password"})
+	rows.AddRow(1, "Kaladin", "k@s.com")
+	mock.ExpectQuery("INSERT").WithArgs("Kaladin", "k@s.com", "password").WillReturnRows(rows)
+
+	body, resp, err := httpRequest(router, http.MethodPost, "http://localhost:1234/users?name=Kaladin&email=k@s.com&password=password", nil)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode, string(body))
+	require.Equal(t, "{\"Id\":1,\"Name\":\"Kaladin\",\"Email\":\"k@s.com\"}", string(body))
+
+	result := &model.User{}
+	err = json.Unmarshal(body, &result)
+	require.NoError(t, err, string(body))
+	require.Equal(t, "Kaladin", result.Name)
+}
+
+func TestHandleUpdateUserHttpOk(t *testing.T) {
+	db, mock, router := getMockDBAndRouter()
+	defer db.Close()
+	mock.ExpectPrepare("UPDATE")
+	rows := mock.NewRows([]string{"id", "name", "email"})
+	rows.AddRow(1, "Kaladin", "k@s.com")
+	mock.ExpectQuery("UPDATE").WithArgs("Kaladin", "k@s.com", "password", 1).WillReturnRows(rows)
+
+	body, resp, err := httpRequest(router, http.MethodPut, "http://localhost:1234/users/1?name=Kaladin&email=k@s.com&password=password", nil)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode, string(body))
+	require.Equal(t, "{\"Id\":1,\"Name\":\"Kaladin\",\"Email\":\"k@s.com\"}", string(body))
+
+	result := &model.User{}
+	err = json.Unmarshal(body, &result)
+	require.NoError(t, err, string(body))
+	require.Equal(t, "Kaladin", result.Name)
+}
