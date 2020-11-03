@@ -9,17 +9,23 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 
 	"go-rest-api/model"
 
 	"github.com/gorilla/mux"
 )
 
+var (
+	httpReadTimeout  = 5 * time.Second
+	httpWriteTimeout = 5 * time.Second
+	httpIdleTimeout  = 1 * time.Minute
+)
+
 func readinessHandler(w http.ResponseWriter, r *http.Request) {
 	// TODO: add a DB ping check
 	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/json")
-	io.WriteString(w, `{"hello": world}`)
+	io.WriteString(w, "Hello World")
 }
 
 func getUsersHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
@@ -149,8 +155,9 @@ func parseRequest(r *http.Request) (string, string, string) {
 	return name, email, password
 }
 
-func handleRequests(db *sql.DB) {
+func getRouter(db *sql.DB) *mux.Router {
 	router := mux.NewRouter()
+
 	router.HandleFunc("/readiness", readinessHandler).Methods(http.MethodGet)
 	router.HandleFunc("/users", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
@@ -172,8 +179,22 @@ func handleRequests(db *sql.DB) {
 		}
 	}).Methods(http.MethodGet, http.MethodDelete, http.MethodPut)
 
-	fmt.Println("Now listening at port 8000")
-	log.Fatal(http.ListenAndServe(":8000", router))
+	return router
+
+	// fmt.Println("Now listening at port 8000")
+	// log.Fatal(http.ListenAndServe(":8000", router))
+}
+
+func httpServer(host string, port string, db *sql.DB) {
+	srv := &http.Server{
+		Addr:         fmt.Sprintf("%s:%s", host, port),
+		ReadTimeout:  httpReadTimeout,
+		WriteTimeout: httpWriteTimeout,
+		IdleTimeout:  httpIdleTimeout,
+		Handler:      getRouter(db),
+	}
+	log.Printf("Listening http://%s", srv.Addr)
+	log.Fatal(srv.ListenAndServe())
 }
 
 func getEnv(key string) string {
@@ -188,8 +209,11 @@ func getEnv(key string) string {
 
 func main() {
 	dbUrl := getEnv("DATABASE_URL")
+	httpHost := getEnv("HTTP_HOST")
+	httpPort := getEnv("HTTP_PORT")
+
 	db := model.GetDb(dbUrl)
 	defer db.Close()
 
-	handleRequests(db)
+	httpServer(httpHost, httpPort, db)
 }
