@@ -59,6 +59,7 @@ func TestGetEnvNotSet(t *testing.T) {
 func TestHandleReadinessOk(t *testing.T) {
 	db, _, router := getMockDBAndRouter()
 	defer db.Close()
+
 	body, resp, err := httpRequest(router, http.MethodGet, "http://localhost:1234/readiness", nil)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode, string(body))
@@ -68,6 +69,7 @@ func TestHandleReadinessOk(t *testing.T) {
 func TestHandleGetUsersHttpOk(t *testing.T) {
 	db, mock, router := getMockDBAndRouter()
 	defer db.Close()
+
 	rows := mock.NewRows([]string{"id", "name", "email"})
 	rows.AddRow("1", "Kaladin", "k@s.com")
 	rows.AddRow("2", "Adolin", "a@k.com")
@@ -84,9 +86,22 @@ func TestHandleGetUsersHttpOk(t *testing.T) {
 	require.Equal(t, "Kaladin", result[0].Name)
 }
 
+func TestHandleGetUsersNoRows(t *testing.T) {
+	db, mock, router := getMockDBAndRouter()
+	defer db.Close()
+
+	rows := mock.NewRows([]string{"id", "name", "email"})
+	mock.ExpectQuery("SELECT").WillReturnRows(rows)
+
+	body, resp, err := httpRequest(router, http.MethodGet, "http://localhost:1234/users", nil)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusNotFound, resp.StatusCode, string(body))
+}
+
 func TestHandleGetUserHttpOk(t *testing.T) {
 	db, mock, router := getMockDBAndRouter()
 	defer db.Close()
+
 	mock.ExpectPrepare("SELECT")
 	rows := mock.NewRows([]string{"id", "name", "email"})
 	rows.AddRow("1", "Kaladin", "k@s.com")
@@ -103,9 +118,23 @@ func TestHandleGetUserHttpOk(t *testing.T) {
 	require.Equal(t, "Kaladin", result.Name)
 }
 
+func TestHandleGetUserNotFound(t *testing.T) {
+	db, mock, router := getMockDBAndRouter()
+	defer db.Close()
+
+	mock.ExpectPrepare("SELECT")
+	rows := mock.NewRows([]string{"id", "name", "email"})
+	mock.ExpectQuery("SELECT").WithArgs(1).WillReturnRows(rows)
+
+	body, resp, err := httpRequest(router, http.MethodGet, "http://localhost:1234/users/1", nil)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusNotFound, resp.StatusCode, string(body))
+}
+
 func TestHandleDeleteUserHttpOk(t *testing.T) {
 	db, mock, router := getMockDBAndRouter()
 	defer db.Close()
+
 	mock.ExpectPrepare("DELETE")
 	rows := mock.NewRows([]string{"id", "name", "email"})
 	rows.AddRow("1", "Kaladin", "k@s.com")
@@ -122,9 +151,23 @@ func TestHandleDeleteUserHttpOk(t *testing.T) {
 	require.Equal(t, "Kaladin", result.Name)
 }
 
+func TestHandleDeleteUserNotFound(t *testing.T) {
+	db, mock, router := getMockDBAndRouter()
+	defer db.Close()
+
+	mock.ExpectPrepare("DELETE")
+	rows := mock.NewRows([]string{"id", "name", "email"})
+	mock.ExpectQuery("DELETE").WithArgs(1).WillReturnRows(rows)
+
+	body, resp, err := httpRequest(router, http.MethodDelete, "http://localhost:1234/users/1", nil)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusNotFound, resp.StatusCode, string(body))
+}
+
 func TestHandleCreateUserHttpOk(t *testing.T) {
 	db, mock, router := getMockDBAndRouter()
 	defer db.Close()
+
 	mock.ExpectPrepare("INSERT")
 	rows := mock.NewRows([]string{"name", "email", "password"})
 	rows.AddRow(1, "Kaladin", "k@s.com")
@@ -141,9 +184,24 @@ func TestHandleCreateUserHttpOk(t *testing.T) {
 	require.Equal(t, "Kaladin", result.Name)
 }
 
+func TestHandleCreateUserBadArgs(t *testing.T) {
+	db, mock, router := getMockDBAndRouter()
+	defer db.Close()
+
+	mock.ExpectPrepare("INSERT")
+	rows := mock.NewRows([]string{"name", "email", "password"})
+	rows.AddRow(1, "Kaladin", "k@s.com")
+	mock.ExpectQuery("INSERT").WithArgs("Kaladin", 1, "password").WillReturnRows(rows)
+
+	body, resp, err := httpRequest(router, http.MethodPost, "http://localhost:1234/users?name=Kaladin&email=1&password=password", nil)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusInternalServerError, resp.StatusCode, string(body))
+}
+
 func TestHandleUpdateUserHttpOk(t *testing.T) {
 	db, mock, router := getMockDBAndRouter()
 	defer db.Close()
+
 	mock.ExpectPrepare("UPDATE")
 	rows := mock.NewRows([]string{"id", "name", "email"})
 	rows.AddRow(1, "Kaladin", "k@s.com")
@@ -158,4 +216,18 @@ func TestHandleUpdateUserHttpOk(t *testing.T) {
 	err = json.Unmarshal(body, &result)
 	require.NoError(t, err, string(body))
 	require.Equal(t, "Kaladin", result.Name)
+}
+
+func TestHandleUpdateUserBadArgs(t *testing.T) {
+	db, mock, router := getMockDBAndRouter()
+	defer db.Close()
+
+	mock.ExpectPrepare("UPDATE")
+	rows := mock.NewRows([]string{"id", "name", "email"})
+	rows.AddRow(1, "Kaladin", "k@s.com")
+	mock.ExpectQuery("UPDATE").WithArgs("Kaladin", "k@s.com", nil, 1).WillReturnRows(rows)
+
+	body, resp, err := httpRequest(router, http.MethodPut, "http://localhost:1234/users/1?name=Kaladin&email=k@s.com&password=", nil)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusInternalServerError, resp.StatusCode, string(body))
 }
