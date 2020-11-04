@@ -32,10 +32,11 @@ func getUsersHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	users, err := model.GetUsers(db)
 	if err != nil {
 		log.Println(err)
-		switch err {
-		case sql.ErrNoRows:
+		// throw custom error type since psql doesn't throw a sql.ErrNoRows when there is an empty array
+		// TODO - see if there's a better way to handle this and keep it consistent with the switch/case
+		if err.Error() == "no users found" {
 			http.Error(w, err.Error(), 404)
-		default:
+		} else {
 			http.Error(w, err.Error(), 500)
 		}
 		return

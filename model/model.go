@@ -1,16 +1,17 @@
 package model
 
 import (
-	"os"
-	"fmt"
 	"database/sql"
+	"errors"
+	"fmt"
+	"os"
 
 	_ "github.com/lib/pq"
 )
 
 type User struct {
-	Id int
-	Name string
+	Id    int
+	Name  string
 	Email string
 }
 
@@ -24,13 +25,13 @@ func GetDb(dbUrl string) *sql.DB {
 }
 
 func GetUsers(db *sql.DB) ([]*User, error) {
-	users := make([]*User, 0)
-	rows, err := db.Query("SELECT id, name, email FROM users")
+	rows, err := db.Query("SELECT id, name, email FROM users WHERE id=1")
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
+	users := make([]*User, 0)
 	for rows.Next() {
 		user := &User{}
 		err := rows.Scan(&user.Id, &user.Name, &user.Email)
@@ -39,6 +40,11 @@ func GetUsers(db *sql.DB) ([]*User, error) {
 		}
 		users = append(users, user)
 	}
+
+	if len(users) < 1 {
+		return nil, errors.New("no users found")
+	}
+
 	return users, err
 }
 
