@@ -41,14 +41,7 @@ func getUsersHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		}
 		return
 	}
-	var body []byte
-	body, err = json.Marshal(users)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, err.Error(), 500)
-		return
-	}
-	w.Write(body)
+	marshalAndWriteJson(users, w)
 }
 
 func getUserHandler(w http.ResponseWriter, r *http.Request, db *sql.DB, id int) {
@@ -63,14 +56,7 @@ func getUserHandler(w http.ResponseWriter, r *http.Request, db *sql.DB, id int) 
 		}
 		return
 	}
-	var body []byte
-	body, err = json.Marshal(user)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, err.Error(), 500)
-		return
-	}
-	w.Write(body)
+	marshalAndWriteJson(user, w)
 }
 
 func deleteUserHandler(w http.ResponseWriter, r *http.Request, db *sql.DB, id int) {
@@ -85,14 +71,7 @@ func deleteUserHandler(w http.ResponseWriter, r *http.Request, db *sql.DB, id in
 		}
 		return
 	}
-	var body []byte
-	body, err = json.Marshal(user)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, err.Error(), 500)
-		return
-	}
-	w.Write(body)
+	marshalAndWriteJson(user, w)
 }
 
 func createUserHandler(w http.ResponseWriter, r *http.Request, db *sql.DB, name string, email string, password string) {
@@ -107,14 +86,7 @@ func createUserHandler(w http.ResponseWriter, r *http.Request, db *sql.DB, name 
 		}
 		return
 	}
-	var body []byte
-	body, err = json.Marshal(user)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, err.Error(), 500)
-		return
-	}
-	w.Write(body)
+	marshalAndWriteJson(user, w)
 }
 
 func updateUserHandler(w http.ResponseWriter, r *http.Request, db *sql.DB, id int, name string, email string, password string) {
@@ -129,8 +101,12 @@ func updateUserHandler(w http.ResponseWriter, r *http.Request, db *sql.DB, id in
 		}
 		return
 	}
+	marshalAndWriteJson(user, w)
+}
+
+func marshalAndWriteJson(data interface{}, w http.ResponseWriter) {
 	var body []byte
-	body, err = json.Marshal(user)
+	body, err := json.Marshal(data)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), 500)
@@ -181,9 +157,6 @@ func getRouter(db *sql.DB) *mux.Router {
 	}).Methods(http.MethodGet, http.MethodDelete, http.MethodPut)
 
 	return router
-
-	// fmt.Println("Now listening at port 8000")
-	// log.Fatal(http.ListenAndServe(":8000", router))
 }
 
 func httpServer(host string, port string, db *sql.DB) {
