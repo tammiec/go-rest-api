@@ -25,7 +25,7 @@ func GetDb(dbUrl string) *sql.DB {
 }
 
 func GetUsers(db *sql.DB) ([]*User, error) {
-	rows, err := db.Query("SELECT id, name, email FROM users WHERE id=1")
+	rows, err := db.Query("SELECT id, name, email FROM users")
 	if err != nil {
 		return nil, err
 	}
