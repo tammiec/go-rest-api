@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"go-rest-api/model"
 	"io/ioutil"
@@ -98,6 +99,17 @@ func TestHandleGetUsersNoRows(t *testing.T) {
 	require.Equal(t, http.StatusNotFound, resp.StatusCode, string(body))
 }
 
+func TestHandleGetUsersSqlError(t *testing.T) {
+	db, mock, router := getMockDBAndRouter()
+	defer db.Close()
+
+	mock.ExpectQuery("SELECT").WillReturnError(errors.New("error"))
+
+	body, resp, err := httpRequest(router, http.MethodGet, "http://localhost:1234/users", nil)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusInternalServerError, resp.StatusCode, string(body))
+}
+
 func TestHandleGetUserHttpOk(t *testing.T) {
 	db, mock, router := getMockDBAndRouter()
 	defer db.Close()
@@ -129,6 +141,17 @@ func TestHandleGetUserNotFound(t *testing.T) {
 	body, resp, err := httpRequest(router, http.MethodGet, "http://localhost:1234/users/1", nil)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusNotFound, resp.StatusCode, string(body))
+}
+
+func TestHandleGetUserSqlError(t *testing.T) {
+	db, mock, router := getMockDBAndRouter()
+	defer db.Close()
+
+	mock.ExpectQuery("SELECT").WillReturnError(errors.New("error"))
+
+	body, resp, err := httpRequest(router, http.MethodGet, "http://localhost:1234/users/1", nil)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusInternalServerError, resp.StatusCode, string(body))
 }
 
 func TestHandleDeleteUserHttpOk(t *testing.T) {
@@ -164,6 +187,18 @@ func TestHandleDeleteUserNotFound(t *testing.T) {
 	require.Equal(t, http.StatusNotFound, resp.StatusCode, string(body))
 }
 
+func TestHandleDeleteUserSqlError(t *testing.T) {
+	db, mock, router := getMockDBAndRouter()
+	defer db.Close()
+
+	mock.ExpectPrepare("DELETE")
+	mock.ExpectQuery("DELETE").WithArgs(1).WillReturnError(errors.New("error"))
+
+	body, resp, err := httpRequest(router, http.MethodDelete, "http://localhost:1234/users/1", nil)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusInternalServerError, resp.StatusCode, string(body))
+}
+
 func TestHandleCreateUserHttpOk(t *testing.T) {
 	db, mock, router := getMockDBAndRouter()
 	defer db.Close()
@@ -192,6 +227,18 @@ func TestHandleCreateUserBadArgs(t *testing.T) {
 	rows := mock.NewRows([]string{"name", "email", "password"})
 	rows.AddRow(1, "Kaladin", "k@s.com")
 	mock.ExpectQuery("INSERT").WithArgs("Kaladin", 1, "password").WillReturnRows(rows)
+
+	body, resp, err := httpRequest(router, http.MethodPost, "http://localhost:1234/users?name=Kaladin&email=1&password=password", nil)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusInternalServerError, resp.StatusCode, string(body))
+}
+
+func TestHandleCreateUserSqlError(t *testing.T) {
+	db, mock, router := getMockDBAndRouter()
+	defer db.Close()
+
+	mock.ExpectPrepare("INSERT")
+	mock.ExpectQuery("INSERT").WithArgs("Kaladin", 1, "password").WillReturnError(errors.New("error"))
 
 	body, resp, err := httpRequest(router, http.MethodPost, "http://localhost:1234/users?name=Kaladin&email=1&password=password", nil)
 	require.NoError(t, err)
@@ -230,4 +277,29 @@ func TestHandleUpdateUserBadArgs(t *testing.T) {
 	body, resp, err := httpRequest(router, http.MethodPut, "http://localhost:1234/users/1?name=Kaladin&email=k@s.com&password=", nil)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusInternalServerError, resp.StatusCode, string(body))
+}
+
+func TestHandleUpdateUserSqlError(t *testing.T) {
+	db, mock, router := getMockDBAndRouter()
+	defer db.Close()
+
+	mock.ExpectPrepare("UPDATE")
+	mock.ExpectQuery("UPDATE").WithArgs("Kaladin", "k@s.com", nil, 1).WillReturnError(errors.New("error"))
+
+	body, resp, err := httpRequest(router, http.MethodPut, "http://localhost:1234/users/1?name=Kaladin&email=k@s.com&password=", nil)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusInternalServerError, resp.StatusCode, string(body))
+}
+
+func TestHandleUpdateUserNotFound(t *testing.T) {
+	db, mock, router := getMockDBAndRouter()
+	defer db.Close()
+
+	mock.ExpectPrepare("UPDATE")
+	rows := mock.NewRows([]string{"id", "name", "email"})
+	mock.ExpectQuery("UPDATE").WithArgs("Kaladin", "k@s.com", "password", 1).WillReturnRows(rows)
+
+	body, resp, err := httpRequest(router, http.MethodPut, "http://localhost:1234/users/1?name=Kaladin&email=k@s.com&password=password", nil)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusNotFound, resp.StatusCode, string(body))
 }
