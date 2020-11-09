@@ -147,6 +147,7 @@ func TestHandleGetUserSqlError(t *testing.T) {
 	db, mock, router := getMockDBAndRouter()
 	defer db.Close()
 
+	mock.ExpectPrepare("SELECT")
 	mock.ExpectQuery("SELECT").WillReturnError(errors.New("error"))
 
 	body, resp, err := httpRequest(router, http.MethodGet, "http://localhost:1234/users/1", nil)
@@ -225,7 +226,7 @@ func TestHandleCreateUserBadArgs(t *testing.T) {
 
 	mock.ExpectPrepare("INSERT")
 	rows := mock.NewRows([]string{"name", "email", "password"})
-	rows.AddRow(1, "Kaladin", "k@s.com")
+	rows.AddRow(1, "Kaladin", 1)
 	mock.ExpectQuery("INSERT").WithArgs("Kaladin", 1, "password").WillReturnRows(rows)
 
 	body, resp, err := httpRequest(router, http.MethodPost, "http://localhost:1234/users?name=Kaladin&email=1&password=password", nil)
@@ -238,9 +239,9 @@ func TestHandleCreateUserSqlError(t *testing.T) {
 	defer db.Close()
 
 	mock.ExpectPrepare("INSERT")
-	mock.ExpectQuery("INSERT").WithArgs("Kaladin", 1, "password").WillReturnError(errors.New("error"))
+	mock.ExpectQuery("INSERT").WithArgs("Kaladin", "k@s.com", "password").WillReturnError(errors.New("error"))
 
-	body, resp, err := httpRequest(router, http.MethodPost, "http://localhost:1234/users?name=Kaladin&email=1&password=password", nil)
+	body, resp, err := httpRequest(router, http.MethodPost, "http://localhost:1234/users?name=Kaladin&email=k@s.com&password=password", nil)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusInternalServerError, resp.StatusCode, string(body))
 }
@@ -284,9 +285,9 @@ func TestHandleUpdateUserSqlError(t *testing.T) {
 	defer db.Close()
 
 	mock.ExpectPrepare("UPDATE")
-	mock.ExpectQuery("UPDATE").WithArgs("Kaladin", "k@s.com", nil, 1).WillReturnError(errors.New("error"))
+	mock.ExpectQuery("UPDATE").WithArgs("Kaladin", "k@s.com", "password", 1).WillReturnError(errors.New("error"))
 
-	body, resp, err := httpRequest(router, http.MethodPut, "http://localhost:1234/users/1?name=Kaladin&email=k@s.com&password=", nil)
+	body, resp, err := httpRequest(router, http.MethodPut, "http://localhost:1234/users/1?name=Kaladin&email=k@s.com&password=password", nil)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusInternalServerError, resp.StatusCode, string(body))
 }
