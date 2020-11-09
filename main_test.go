@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"go-rest-api/model"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -15,6 +14,7 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/require"
+	"github.com/tammiec/go-rest-api/model"
 )
 
 func httpRequest(router *mux.Router, method string, url string, headers map[string]string) ([]byte, *http.Response, error) {

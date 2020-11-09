@@ -11,9 +11,8 @@ import (
 	"strconv"
 	"time"
 
-	"go-rest-api/model"
-
 	"github.com/gorilla/mux"
+	"github.com/tammiec/go-rest-api/model"
 )
 
 var (
