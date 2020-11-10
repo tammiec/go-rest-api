@@ -24,7 +24,7 @@ var (
 func readinessHandler(w http.ResponseWriter, r *http.Request) {
 	// TODO: add a DB ping check
 	w.WriteHeader(http.StatusOK)
-	io.WriteString(w, "Hello World")
+	io.WriteString(w, "Ready")
 }
 
 func getUsersHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
