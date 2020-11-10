@@ -64,7 +64,7 @@ func TestHandleReadinessOk(t *testing.T) {
 	body, resp, err := httpRequest(router, http.MethodGet, "http://localhost:1234/readiness", nil)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode, string(body))
-	require.Equal(t, "Hello World", string(body))
+	require.Equal(t, "Ready", string(body))
 }
 
 func TestHandleGetUsersHttpOk(t *testing.T) {
