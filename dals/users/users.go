@@ -7,33 +7,53 @@ import (
 	"os"
 
 	_ "github.com/lib/pq"
+	model "github.com/tammiec/go-rest-api/models/user"
 )
 
-type User struct {
-	Id    int
-	Name  string
-	Email string
+// To be replaced with config structs
+// type User struct {
+// 	Id    int
+// 	Name  string
+// 	Email string
+// }
+
+type Deps struct{}
+
+type Config struct {
+	url string
 }
 
-func GetDb(dbUrl string) *sql.DB {
-	db, err := sql.Open("postgres", dbUrl)
+type Users interface {
+	GetUsers() ([]*model.UserResponse, error)
+	GetUser(id int) (*model.UserResponse, error)
+	DeleteUser(id int) (*model.UserResponse, error)
+	CreateUser(name string, email string, password string) (*model.UserResponse, error)
+	UpdateUser(id int, name string, email string, password string) (*model.UserResponse, error)
+}
+
+type UsersImpl struct {
+	db *sql.DB
+}
+
+func New(deps *Deps, config *Config) Users {
+	db, err := sql.Open("postgres", config.url)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
 		os.Exit(1)
 	}
-	return db
+	return &UsersImpl{db: db}
 }
 
-func GetUsers(db *sql.DB) ([]*User, error) {
-	rows, err := db.Query("SELECT id, name, email FROM users")
+func (impl *UsersImpl) GetUsers() ([]*model.UserResponse, error) {
+	rows, err := impl.db.Query("SELECT id, name, email FROM users")
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	users := make([]*User, 0)
+	users := make([]*model.UserResponse, 0)
 	for rows.Next() {
-		user := &User{}
+		user := &model.UserResponse{}
 		err := rows.Scan(&user.Id, &user.Name, &user.Email)
 		if err != nil {
 			return nil, err
@@ -48,9 +68,9 @@ func GetUsers(db *sql.DB) ([]*User, error) {
 	return users, err
 }
 
-func GetUser(db *sql.DB, id int) (*User, error) {
-	user := &User{}
-	stmt, err := db.Prepare("SELECT id, name, email FROM users WHERE id=$1")
+func (impl *UsersImpl) GetUser(id int) (*model.UserResponse, error) {
+	user := &model.UserResponse{}
+	stmt, err := impl.db.Prepare("SELECT id, name, email FROM users WHERE id=$1")
 	if err != nil {
 		return nil, err
 	}
@@ -62,9 +82,9 @@ func GetUser(db *sql.DB, id int) (*User, error) {
 	return user, err
 }
 
-func DeleteUser(db *sql.DB, id int) (*User, error) {
-	user := &User{}
-	stmt, err := db.Prepare("DELETE FROM users WHERE id=$1 RETURNING id, name, email")
+func (impl *UsersImpl) DeleteUser(id int) (*model.UserResponse, error) {
+	user := &model.UserResponse{}
+	stmt, err := impl.db.Prepare("DELETE FROM users WHERE id=$1 RETURNING id, name, email")
 	if err != nil {
 		return nil, err
 	}
@@ -76,9 +96,9 @@ func DeleteUser(db *sql.DB, id int) (*User, error) {
 	return user, err
 }
 
-func CreateUser(db *sql.DB, name string, email string, password string) (*User, error) {
-	user := &User{}
-	stmt, err := db.Prepare("INSERT INTO users (name, email, password) VALUES ($1, $2, $3) RETURNING id, name, email")
+func (impl *UsersImpl) CreateUser(name string, email string, password string) (*model.UserResponse, error) {
+	user := &model.UserResponse{}
+	stmt, err := impl.db.Prepare("INSERT INTO users (name, email, password) VALUES ($1, $2, $3) RETURNING id, name, email")
 	if err != nil {
 		return nil, err
 	}
@@ -90,9 +110,9 @@ func CreateUser(db *sql.DB, name string, email string, password string) (*User, 
 	return user, err
 }
 
-func UpdateUser(db *sql.DB, id int, name string, email string, password string) (*User, error) {
-	user := &User{}
-	stmt, err := db.Prepare("UPDATE users SET name=$1, email=$2, password=$3 WHERE id=$4 RETURNING id, name, email")
+func (impl *UsersImpl) UpdateUser(id int, name string, email string, password string) (*model.UserResponse, error) {
+	user := &model.UserResponse{}
+	stmt, err := impl.db.Prepare("UPDATE users SET name=$1, email=$2, password=$3 WHERE id=$4 RETURNING id, name, email")
 	if err != nil {
 		return nil, err
 	}
