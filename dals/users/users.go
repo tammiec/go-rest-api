@@ -26,9 +26,9 @@ type Config struct {
 type Users interface {
 	GetUsers() ([]*model.UserResponse, error)
 	GetUser(id int) (*model.UserResponse, error)
-	DeleteUser(id int) (*model.UserResponse, error)
 	CreateUser(name string, email string, password string) (*model.UserResponse, error)
 	UpdateUser(id int, name string, email string, password string) (*model.UserResponse, error)
+	DeleteUser(id int) (*model.UserResponse, error)
 }
 
 type UsersImpl struct {
