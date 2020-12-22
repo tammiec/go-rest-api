@@ -19,10 +19,10 @@ func main() {
 	appContext := appcontext.NewAppContext(_config)
 	serverUsers := server.NewServer(*appContext)
 	start("users", serverUsers)
-	waitForSigInt(serverSuggest)
+	waitForSigInt(serverUsers)
 }
 
-func waitForSigInt(httpServer *http.Server, metricsServer *http.Server) {
+func waitForSigInt(httpServer *http.Server) {
 	var wait time.Duration
 	flag.DurationVar(&wait, "graceful-timeout", time.Second*15, "the duration for which the server gracefully wait for existing connections to finish - e.g. 15s or 1m")
 	flag.Parse()
@@ -42,8 +42,6 @@ func waitForSigInt(httpServer *http.Server, metricsServer *http.Server) {
 	// until the timeout deadline.
 	//nolint
 	httpServer.Shutdown(ctx)
-	//nolint
-	metricsServer.Shutdown(ctx)
 
 	// Optionally, you could run srv.Shutdown in a goroutine and block on
 	// <-ctx.Done() if your application should wait for other services

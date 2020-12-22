@@ -24,16 +24,16 @@ func New(deps *Deps) *Handlers {
 		Health: deps.Health,
 		Render: deps.Render,
 	}
-	healthMiddle := health.HandlerImpl{Deps: &healthDeps}
+	health := health.HandlerImpl{Deps: &healthDeps}
 
 	usersDeps := users.Deps{
 		UsersService: deps.Users,
 		Render:       deps.Render,
 	}
-	usersMiddle := users.HandlerImpl{Deps: &usersDeps}
+	users := users.HandlerImpl{Deps: &usersDeps}
 
 	return &Handlers{
-		Health: &healthMiddle,
-		Users:  &usersMiddle,
+		Health: &health,
+		Users:  &users,
 	}
 }
