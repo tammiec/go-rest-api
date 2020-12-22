@@ -2,8 +2,10 @@ package users
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/dyninc/qstring"
+	"github.com/gorilla/mux"
 	"github.com/tammiec/go-rest-api/clients/render"
 	"github.com/tammiec/go-rest-api/handlers/utils"
 	model "github.com/tammiec/go-rest-api/models/user"
@@ -43,7 +45,7 @@ func (impl *HandlerImpl) GetAll(w http.ResponseWriter, r *http.Request) {
 }
 
 func (impl *HandlerImpl) Get(w http.ResponseWriter, r *http.Request) {
-	request := parseRequest(w, r, impl.deps.Render)
+	request := parseRequest(w, r, impl.deps.Render, true)
 	if request == nil {
 		return
 	}
@@ -56,7 +58,7 @@ func (impl *HandlerImpl) Get(w http.ResponseWriter, r *http.Request) {
 }
 
 func (impl *HandlerImpl) Create(w http.ResponseWriter, r *http.Request) {
-	request := parseRequest(w, r, impl.deps.Render)
+	request := parseRequest(w, r, impl.deps.Render, false)
 	if request == nil {
 		return
 	}
@@ -69,7 +71,7 @@ func (impl *HandlerImpl) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (impl *HandlerImpl) Update(w http.ResponseWriter, r *http.Request) {
-	request := parseRequest(w, r, impl.deps.Render)
+	request := parseRequest(w, r, impl.deps.Render, true)
 	if request == nil {
 		return
 	}
@@ -82,7 +84,7 @@ func (impl *HandlerImpl) Update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (impl *HandlerImpl) Delete(w http.ResponseWriter, r *http.Request) {
-	request := parseRequest(w, r, impl.deps.Render)
+	request := parseRequest(w, r, impl.deps.Render, true)
 	if request == nil {
 		return
 	}
@@ -102,12 +104,21 @@ func respondWithError(render render.Render, w http.ResponseWriter, status int, m
 	render.JSON(w, response.Status, response)
 }
 
-func parseRequest(w http.ResponseWriter, r *http.Request, render render.Render) *model.UserRequest {
+func parseRequest(w http.ResponseWriter, r *http.Request, render render.Render, getId bool) *model.UserRequest {
 	userRequest := &model.UserRequest{}
-	err := qstring.Unmarshal(r.URL.Query(), userRequest)
+	var err error
+	if getId {
+		userRequest.Id, err = validateId(mux.Vars(r)["id"], w)
+	}
+	err = qstring.Unmarshal(r.URL.Query(), userRequest)
 	if err != nil {
 		respondWithError(render, w, http.StatusInternalServerError, "Internal Server Error")
 		return nil
 	}
 	return userRequest
+}
+
+func validateId(idString string, w http.ResponseWriter) (*int, error) {
+	id, err := strconv.Atoi(idString)
+	return &id, err
 }
