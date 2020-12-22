@@ -1,192 +1,62 @@
 package main
 
 import (
-	"database/sql"
-	"encoding/json"
-	"fmt"
-	"io"
+	"context"
+	"flag"
 	"log"
 	"net/http"
 	"os"
-	"strconv"
+	"os/signal"
 	"time"
 
-	"github.com/gorilla/mux"
-	"github.com/tammiec/go-rest-api/model"
+	"github.com/tammiec/go-rest-api/appcontext"
+	"github.com/tammiec/go-rest-api/config"
+	"github.com/tammiec/go-rest-api/server"
 )
-
-var (
-	httpReadTimeout  = 5 * time.Second
-	httpWriteTimeout = 5 * time.Second
-	httpIdleTimeout  = 1 * time.Minute
-)
-
-func readinessHandler(w http.ResponseWriter, r *http.Request) {
-	// TODO: add a DB ping check
-	w.WriteHeader(http.StatusOK)
-	io.WriteString(w, "Ready")
-}
-
-func getUsersHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-	users, err := model.GetUsers(db)
-	if err != nil {
-		log.Println(err)
-		// throw custom error type since psql doesn't throw a sql.ErrNoRows when there is an empty array
-		// TODO - see if there's a better way to handle this and keep it consistent with the switch/case
-		if err.Error() == "no users found" {
-			http.Error(w, err.Error(), 404)
-		} else {
-			http.Error(w, err.Error(), 500)
-		}
-		return
-	}
-	marshalAndWriteJson(users, w)
-}
-
-func getUserHandler(w http.ResponseWriter, r *http.Request, db *sql.DB, id int) {
-	user, err := model.GetUser(db, id)
-	if err != nil {
-		log.Println(err)
-		switch err {
-		case sql.ErrNoRows:
-			http.Error(w, err.Error(), 404)
-		default:
-			http.Error(w, err.Error(), 500)
-		}
-		return
-	}
-	marshalAndWriteJson(user, w)
-}
-
-func deleteUserHandler(w http.ResponseWriter, r *http.Request, db *sql.DB, id int) {
-	user, err := model.DeleteUser(db, id)
-	if err != nil {
-		log.Println(err)
-		switch err {
-		case sql.ErrNoRows:
-			http.Error(w, err.Error(), 404)
-		default:
-			http.Error(w, err.Error(), 500)
-		}
-		return
-	}
-	marshalAndWriteJson(user, w)
-}
-
-func createUserHandler(w http.ResponseWriter, r *http.Request, db *sql.DB, name string, email string, password string) {
-	user, err := model.CreateUser(db, name, email, password)
-	if err != nil {
-		log.Println(err)
-		switch err {
-		case sql.ErrNoRows:
-			http.Error(w, err.Error(), 404)
-		default:
-			http.Error(w, err.Error(), 500)
-		}
-		return
-	}
-	marshalAndWriteJson(user, w)
-}
-
-func updateUserHandler(w http.ResponseWriter, r *http.Request, db *sql.DB, id int, name string, email string, password string) {
-	user, err := model.UpdateUser(db, id, name, email, password)
-	if err != nil {
-		log.Println(err)
-		switch err {
-		case sql.ErrNoRows:
-			http.Error(w, err.Error(), 404)
-		default:
-			http.Error(w, err.Error(), 500)
-		}
-		return
-	}
-	marshalAndWriteJson(user, w)
-}
-
-func marshalAndWriteJson(data interface{}, w http.ResponseWriter) {
-	var body []byte
-	body, err := json.Marshal(data)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, err.Error(), 500)
-		return
-	}
-	w.Write(body)
-}
-
-func validateId(idString string, w http.ResponseWriter) int {
-	id, err := strconv.Atoi(idString)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, err.Error(), 500)
-	}
-	return id
-}
-
-func parseRequest(r *http.Request) (string, string, string) {
-	r.ParseForm()
-	name := r.Form["name"][0]
-	email := r.Form["email"][0]
-	password := r.Form["password"][0]
-	return name, email, password
-}
-
-func getRouter(db *sql.DB) *mux.Router {
-	router := mux.NewRouter()
-
-	router.HandleFunc("/readiness", readinessHandler).Methods(http.MethodGet)
-	router.HandleFunc("/users", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet {
-			getUsersHandler(w, r, db)
-		} else if r.Method == http.MethodPost {
-			name, email, password := parseRequest(r)
-			createUserHandler(w, r, db, name, email, password)
-		}
-	}).Methods(http.MethodGet, http.MethodPost)
-	router.HandleFunc("/users/{id:[0-9]+}", func(w http.ResponseWriter, r *http.Request) {
-		id := validateId(mux.Vars(r)["id"], w)
-		if r.Method == http.MethodGet {
-			getUserHandler(w, r, db, id)
-		} else if r.Method == http.MethodDelete {
-			deleteUserHandler(w, r, db, id)
-		} else if r.Method == http.MethodPut {
-			name, email, password := parseRequest(r)
-			updateUserHandler(w, r, db, id, name, email, password)
-		}
-	}).Methods(http.MethodGet, http.MethodDelete, http.MethodPut)
-
-	return router
-}
-
-func httpServer(host string, port string, db *sql.DB) {
-	srv := &http.Server{
-		Addr:         fmt.Sprintf("%s:%s", host, port),
-		ReadTimeout:  httpReadTimeout,
-		WriteTimeout: httpWriteTimeout,
-		IdleTimeout:  httpIdleTimeout,
-		Handler:      getRouter(db),
-	}
-	log.Printf("Listening http://%s", srv.Addr)
-	log.Fatal(srv.ListenAndServe())
-}
-
-func getEnv(key string) string {
-	v, ok := os.LookupEnv(key)
-	if !ok {
-		panic(fmt.Sprintf("Variable %s is not set", key))
-	} else if v == "" {
-		panic(fmt.Sprintf("Variable %s is blank", key))
-	}
-	return v
-}
 
 func main() {
-	dbUrl := getEnv("DATABASE_URL")
-	httpHost := getEnv("HTTP_HOST")
-	httpPort := getEnv("HTTP_PORT")
+	_config := config.Loader()
+	appContext := appcontext.NewAppContext(_config)
+	serverUsers := server.NewServer(*appContext)
+	start("users", serverUsers)
+	waitForSigInt(serverSuggest)
+}
 
-	db := model.GetDb(dbUrl)
-	defer db.Close()
+func waitForSigInt(httpServer *http.Server, metricsServer *http.Server) {
+	var wait time.Duration
+	flag.DurationVar(&wait, "graceful-timeout", time.Second*15, "the duration for which the server gracefully wait for existing connections to finish - e.g. 15s or 1m")
+	flag.Parse()
 
-	httpServer(httpHost, httpPort, db)
+	c := make(chan os.Signal, 1)
+	// We'll accept graceful shutdowns when quit via SIGINT (Ctrl+C)
+	// SIGKILL, SIGQUIT or SIGTERM (Ctrl+/) will not be caught.
+	signal.Notify(c, os.Interrupt)
+
+	// Block until we receive our signal.
+	<-c
+
+	// Create a deadline to wait for.
+	ctx, cancel := context.WithTimeout(context.Background(), wait)
+	defer cancel()
+	// Doesn't block if no connections, but will otherwise wait
+	// until the timeout deadline.
+	//nolint
+	httpServer.Shutdown(ctx)
+	//nolint
+	metricsServer.Shutdown(ctx)
+
+	// Optionally, you could run srv.Shutdown in a goroutine and block on
+	// <-ctx.Done() if your application should wait for other services
+	// to finalize based on context cancellation.
+	log.Println("shutting down")
+	os.Exit(0)
+}
+
+func start(name string, server *http.Server) {
+	go func() {
+		log.Printf("%s listening at %s\n", name, server.Addr)
+		if err := server.ListenAndServe(); err != nil {
+			log.Println(err)
+		}
+	}()
 }
