@@ -28,7 +28,7 @@ func BuildClients(config *config.Config) *Clients {
 }
 
 func BuildDALs(clients *Clients, config *config.Config) *DALs {
-	usersConfig := &users.Config{url: config.Url}
+	usersConfig := &users.Config{Url: config.DB.Url}
 	usersDeps := &users.Deps{}
 	usersDB := users.New(usersDeps, usersConfig)
 
@@ -37,7 +37,7 @@ func BuildDALs(clients *Clients, config *config.Config) *DALs {
 
 func BuildServices(dals *DALs) *Services {
 	usersDeps := &usersService.Deps{Users: dals.Users}
-	usersService := usersService.New(suggestDeps, &suggestService.Config{})
+	usersService := usersService.New(usersDeps, &usersService.Config{})
 
 	healthDeps := &health.Deps{Users: dals.Users}
 	healthService := health.New(healthDeps, &health.Config{})

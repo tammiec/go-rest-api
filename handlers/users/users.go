@@ -28,72 +28,72 @@ type Handler interface {
 }
 
 type HandlerImpl struct {
-	deps *Deps
+	Deps *Deps
 }
 
 func New(deps *Deps, config *Config) Handler {
-	return &HandlerImpl{deps: deps}
+	return &HandlerImpl{Deps: deps}
 }
 
 func (impl *HandlerImpl) GetAll(w http.ResponseWriter, r *http.Request) {
-	result, err := impl.deps.UsersService.GetAll()
+	result, err := impl.Deps.UsersService.GetAll()
 	if err != nil {
-		respondWithError(impl.deps.Render, w, http.StatusInternalServerError, "Internal Server Error")
+		respondWithError(impl.Deps.Render, w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	impl.deps.Render.JSON(w, http.StatusOK, result)
+	impl.Deps.Render.JSON(w, http.StatusOK, result)
 }
 
 func (impl *HandlerImpl) Get(w http.ResponseWriter, r *http.Request) {
-	request := parseRequest(w, r, impl.deps.Render, true)
+	request := parseRequest(w, r, impl.Deps.Render, true)
 	if request == nil {
 		return
 	}
-	result, err := impl.deps.UsersService.Get(request)
+	result, err := impl.Deps.UsersService.Get(request)
 	if err != nil {
-		respondWithError(impl.deps.Render, w, http.StatusInternalServerError, "Internal Server Error")
+		respondWithError(impl.Deps.Render, w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	impl.deps.Render.JSON(w, http.StatusOK, result)
+	impl.Deps.Render.JSON(w, http.StatusOK, result)
 }
 
 func (impl *HandlerImpl) Create(w http.ResponseWriter, r *http.Request) {
-	request := parseRequest(w, r, impl.deps.Render, false)
+	request := parseRequest(w, r, impl.Deps.Render, false)
 	if request == nil {
 		return
 	}
-	result, err := impl.deps.UsersService.Create(request)
+	result, err := impl.Deps.UsersService.Create(request)
 	if err != nil {
-		respondWithError(impl.deps.Render, w, http.StatusInternalServerError, "Internal Server Error")
+		respondWithError(impl.Deps.Render, w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	impl.deps.Render.JSON(w, http.StatusOK, result)
+	impl.Deps.Render.JSON(w, http.StatusOK, result)
 }
 
 func (impl *HandlerImpl) Update(w http.ResponseWriter, r *http.Request) {
-	request := parseRequest(w, r, impl.deps.Render, true)
+	request := parseRequest(w, r, impl.Deps.Render, true)
 	if request == nil {
 		return
 	}
-	result, err := impl.deps.UsersService.Update(request)
+	result, err := impl.Deps.UsersService.Update(request)
 	if err != nil {
-		respondWithError(impl.deps.Render, w, http.StatusInternalServerError, "Internal Server Error")
+		respondWithError(impl.Deps.Render, w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	impl.deps.Render.JSON(w, http.StatusOK, result)
+	impl.Deps.Render.JSON(w, http.StatusOK, result)
 }
 
 func (impl *HandlerImpl) Delete(w http.ResponseWriter, r *http.Request) {
-	request := parseRequest(w, r, impl.deps.Render, true)
+	request := parseRequest(w, r, impl.Deps.Render, true)
 	if request == nil {
 		return
 	}
-	result, err := impl.deps.UsersService.Delete(request)
+	result, err := impl.Deps.UsersService.Delete(request)
 	if err != nil {
-		respondWithError(impl.deps.Render, w, http.StatusInternalServerError, "Internal Server Error")
+		respondWithError(impl.Deps.Render, w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	impl.deps.Render.JSON(w, http.StatusOK, result)
+	impl.Deps.Render.JSON(w, http.StatusOK, result)
 }
 
 func respondWithError(render render.Render, w http.ResponseWriter, status int, message string) {

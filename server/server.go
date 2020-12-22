@@ -20,11 +20,11 @@ func NewRouter(handlers *handlers.Handlers) http.Handler {
 
 	router.HandleFunc("/", baseHandler)
 
-	router.HandleFunc("/users", handler.Users.GetAll).Methods(http.MethodGet)
-	router.HandleFunc("/users", handler.Users.Create).Methods(http.MethodPost)
-	router.HandleFunc("/users/{id:[0-9]+}", handler.Users.Get).Methods(http.MethodGet)
-	router.HandleFunc("/users/{id:[0-9]+}", handler.Users.Update).Methods(http.MethodPut)
-	router.HandleFunc("/users/{id:[0-9]+}", handler.Users.Delete).Methods(http.MethodDelete)
+	router.HandleFunc("/users", handlers.Users.GetAll).Methods(http.MethodGet)
+	router.HandleFunc("/users", handlers.Users.Create).Methods(http.MethodPost)
+	router.HandleFunc("/users/{id:[0-9]+}", handlers.Users.Get).Methods(http.MethodGet)
+	router.HandleFunc("/users/{id:[0-9]+}", handlers.Users.Update).Methods(http.MethodPut)
+	router.HandleFunc("/users/{id:[0-9]+}", handlers.Users.Delete).Methods(http.MethodDelete)
 
 	return router
 }

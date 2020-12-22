@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -20,11 +21,12 @@ import (
 type Deps struct{}
 
 type Config struct {
-	url string
+	Url string
 }
 
 type Users interface {
 	GetName() string
+	Ping(ctx context.Context) error
 	GetUsers() ([]*model.UserResponse, error)
 	GetUser(id int) (*model.UserResponse, error)
 	CreateUser(name string, email string, password string) (*model.UserResponse, error)
@@ -37,7 +39,7 @@ type UsersImpl struct {
 }
 
 func New(deps *Deps, config *Config) Users {
-	db, err := sql.Open("postgres", config.url)
+	db, err := sql.Open("postgres", config.Url)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
 		os.Exit(1)
@@ -47,6 +49,10 @@ func New(deps *Deps, config *Config) Users {
 
 func (impl *UsersImpl) GetName() string {
 	return "Users"
+}
+
+func (impl *UsersImpl) Ping(ctx context.Context) error {
+	return impl.db.PingContext(ctx)
 }
 
 func (impl *UsersImpl) GetUsers() ([]*model.UserResponse, error) {
