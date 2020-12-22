@@ -24,6 +24,7 @@ type Config struct {
 }
 
 type Users interface {
+	GetName() string
 	GetUsers() ([]*model.UserResponse, error)
 	GetUser(id int) (*model.UserResponse, error)
 	CreateUser(name string, email string, password string) (*model.UserResponse, error)
@@ -42,6 +43,10 @@ func New(deps *Deps, config *Config) Users {
 		os.Exit(1)
 	}
 	return &UsersImpl{db: db}
+}
+
+func (impl *UsersImpl) GetName() string {
+	return "Users"
 }
 
 func (impl *UsersImpl) GetUsers() ([]*model.UserResponse, error) {
