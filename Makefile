@@ -1,9 +1,19 @@
 get:
 	go get -t -v
+	go get github.com/joho/godotenv/cmd/godotenv # This lets you run godotenv from the cli
 .PHONY: get
 
+build-mocks:
+	PATH=$(PATH):$(HOME)/go/bin mockgen -source=handlers/health/health.go -destination=generatedmocks/handlers/health/health.go
+	PATH=$(PATH):$(HOME)/go/bin mockgen -source=handlers/users/users.go -destination=generatedmocks/handlers/users/users.go
+	PATH=$(PATH):$(HOME)/go/bin mockgen -source=services/health/health.go -destination=generatedmocks/services/health/health.go
+	PATH=$(PATH):$(HOME)/go/bin mockgen -source=services/users/users.go -destination=generatedmocks/services/users/users.go
+	PATH=$(PATH):$(HOME)/go/bin mockgen -source=clients/render/render.go -destination=generatedmocks/clients/render/render.go
+	PATH=$(PATH):$(HOME)/go/bin mockgen -source=dals/users/users.go -destination=generatedmocks/dals/users/users.go
+.PHONY: build-mocks
+
 run:
-	HTTP_HOST=localhost HTTP_PORT=8000 DATABASE_URL=postgresql://tammiechung@localhost:5432/python_project?sslmode=disable go run main.go
+	PATH=$(PATH):$(HOME)/go/bin godotenv -f .env go run .
 .PHONY: run
 
 test:
