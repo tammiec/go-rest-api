@@ -11,13 +11,6 @@ import (
 	model "github.com/tammiec/go-rest-api/models/user"
 )
 
-// To be replaced with config structs
-// type User struct {
-// 	Id    int
-// 	Name  string
-// 	Email string
-// }
-
 type Deps struct{}
 
 type Config struct {
@@ -34,7 +27,7 @@ type Users interface {
 	DeleteUser(id int) (*model.UserResponse, error)
 }
 
-type UsersImpl struct {
+type impl struct {
 	db *sql.DB
 }
 
@@ -44,18 +37,18 @@ func New(deps *Deps, config *Config) Users {
 		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
 		os.Exit(1)
 	}
-	return &UsersImpl{db: db}
+	return &impl{db: db}
 }
 
-func (impl *UsersImpl) GetName() string {
+func (impl *impl) GetName() string {
 	return "Users"
 }
 
-func (impl *UsersImpl) Ping(ctx context.Context) error {
+func (impl *impl) Ping(ctx context.Context) error {
 	return impl.db.PingContext(ctx)
 }
 
-func (impl *UsersImpl) GetUsers() ([]*model.UserResponse, error) {
+func (impl *impl) GetUsers() ([]*model.UserResponse, error) {
 	rows, err := impl.db.Query("SELECT id, name, email FROM users")
 	if err != nil {
 		return nil, err
@@ -79,7 +72,7 @@ func (impl *UsersImpl) GetUsers() ([]*model.UserResponse, error) {
 	return users, err
 }
 
-func (impl *UsersImpl) GetUser(id int) (*model.UserResponse, error) {
+func (impl *impl) GetUser(id int) (*model.UserResponse, error) {
 	user := &model.UserResponse{}
 	stmt, err := impl.db.Prepare("SELECT id, name, email FROM users WHERE id=$1")
 	if err != nil {
@@ -93,7 +86,7 @@ func (impl *UsersImpl) GetUser(id int) (*model.UserResponse, error) {
 	return user, err
 }
 
-func (impl *UsersImpl) DeleteUser(id int) (*model.UserResponse, error) {
+func (impl *impl) DeleteUser(id int) (*model.UserResponse, error) {
 	user := &model.UserResponse{}
 	stmt, err := impl.db.Prepare("DELETE FROM users WHERE id=$1 RETURNING id, name, email")
 	if err != nil {
@@ -107,7 +100,7 @@ func (impl *UsersImpl) DeleteUser(id int) (*model.UserResponse, error) {
 	return user, err
 }
 
-func (impl *UsersImpl) CreateUser(name string, email string, password string) (*model.UserResponse, error) {
+func (impl *impl) CreateUser(name string, email string, password string) (*model.UserResponse, error) {
 	user := &model.UserResponse{}
 	stmt, err := impl.db.Prepare("INSERT INTO users (name, email, password) VALUES ($1, $2, $3) RETURNING id, name, email")
 	if err != nil {
@@ -121,7 +114,7 @@ func (impl *UsersImpl) CreateUser(name string, email string, password string) (*
 	return user, err
 }
 
-func (impl *UsersImpl) UpdateUser(id int, name string, email string, password string) (*model.UserResponse, error) {
+func (impl *impl) UpdateUser(id int, name string, email string, password string) (*model.UserResponse, error) {
 	user := &model.UserResponse{}
 	stmt, err := impl.db.Prepare("UPDATE users SET name=$1, email=$2, password=$3 WHERE id=$4 RETURNING id, name, email")
 	if err != nil {

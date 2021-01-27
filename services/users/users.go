@@ -21,15 +21,15 @@ type UsersService interface {
 	Delete(request *model.UserRequest) (*model.UserResponse, error)
 }
 
-type UsersServiceImpl struct {
+type impl struct {
 	deps *Deps
 }
 
 func New(deps *Deps, config *Config) UsersService {
-	return &UsersServiceImpl{deps: deps}
+	return &impl{deps: deps}
 }
 
-func (impl *UsersServiceImpl) List() ([]*model.UserResponse, error) {
+func (impl *impl) List() ([]*model.UserResponse, error) {
 	users, err := impl.deps.Users.GetUsers()
 	if err != nil {
 		log.Println("Could not get users. ", err)
@@ -38,7 +38,7 @@ func (impl *UsersServiceImpl) List() ([]*model.UserResponse, error) {
 	return users, nil
 }
 
-func (impl *UsersServiceImpl) Get(request *model.UserRequest) (*model.UserResponse, error) {
+func (impl *impl) Get(request *model.UserRequest) (*model.UserResponse, error) {
 	user, err := impl.deps.Users.GetUser(*request.Id)
 	if err != nil {
 		log.Println("Could not get user. ", err)
@@ -47,7 +47,7 @@ func (impl *UsersServiceImpl) Get(request *model.UserRequest) (*model.UserRespon
 	return user, nil
 }
 
-func (impl *UsersServiceImpl) Create(request *model.UserRequest) (*model.UserResponse, error) {
+func (impl *impl) Create(request *model.UserRequest) (*model.UserResponse, error) {
 	user, err := impl.deps.Users.CreateUser(*request.Name, *request.Email, *request.Password)
 	if err != nil {
 		log.Println("Could not create user. ", err)
@@ -56,7 +56,7 @@ func (impl *UsersServiceImpl) Create(request *model.UserRequest) (*model.UserRes
 	return user, nil
 }
 
-func (impl *UsersServiceImpl) Update(request *model.UserRequest) (*model.UserResponse, error) {
+func (impl *impl) Update(request *model.UserRequest) (*model.UserResponse, error) {
 	user, err := impl.deps.Users.UpdateUser(*request.Id, *request.Name, *request.Email, *request.Password)
 	if err != nil {
 		log.Println("Could not create user. ", err)
@@ -65,7 +65,7 @@ func (impl *UsersServiceImpl) Update(request *model.UserRequest) (*model.UserRes
 	return user, nil
 }
 
-func (impl *UsersServiceImpl) Delete(request *model.UserRequest) (*model.UserResponse, error) {
+func (impl *impl) Delete(request *model.UserRequest) (*model.UserResponse, error) {
 	user, err := impl.deps.Users.DeleteUser(*request.Id)
 	if err != nil {
 		log.Println("Could not delete user. ", err)

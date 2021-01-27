@@ -17,15 +17,15 @@ type Render interface {
 	JSON(w io.Writer, status int, v interface{})
 }
 
-type RenderImpl struct {
+type impl struct {
 	deps *Deps
 }
 
 func New(deps *Deps, config *Config) Render {
-	return &RenderImpl{deps: deps}
+	return &impl{deps: deps}
 }
 
-func (impl *RenderImpl) JSON(w io.Writer, status int, v interface{}) {
+func (impl *impl) JSON(w io.Writer, status int, v interface{}) {
 	err := impl.deps.Render.JSON(w, status, v)
 
 	if err != nil {
