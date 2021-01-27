@@ -1,0 +1,9 @@
+version: "3"
+
+services:
+  mysql:
+    image: postgres:13.1
+    environment:
+      - POSTGRES_PASSWORD:
+    ports:
+      - "6603:3306"

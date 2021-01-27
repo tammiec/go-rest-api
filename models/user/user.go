@@ -1,18 +1,5 @@
 package user
 
-// type DALRequest struct {
-// 	Id       *int
-// 	Name     *string
-// 	Email    *string
-// 	Password *string
-// }
-
-// type DALResponse struct {
-// 	Id    int
-// 	Name  string
-// 	Email string
-// }
-
 type UserRequest struct {
 	Id       *int
 	Name     *string
@@ -25,7 +12,3 @@ type UserResponse struct {
 	Name  string
 	Email string
 }
-
-// type UsersResponse struct {
-// 	Users []UserResponse
-// }
