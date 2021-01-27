@@ -97,3 +97,9 @@ Content-Type: text/plain; charset=utf-8
 
 {"Id":1,"Name":"Peter","Email":"peter@mail.com"}
 ```
+
+### TODO
+- deal with missing params on create and update endpoints
+- migrate tests and use generated mocks
+- set up dockerfile and docker container for PSQL and schema to test DAL
+- handle errors
