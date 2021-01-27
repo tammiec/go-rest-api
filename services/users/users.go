@@ -14,7 +14,7 @@ type Deps struct {
 type Config struct{}
 
 type UsersService interface {
-	GetAll() ([]*model.UserResponse, error)
+	List() ([]*model.UserResponse, error)
 	Get(request *model.UserRequest) (*model.UserResponse, error)
 	Create(request *model.UserRequest) (*model.UserResponse, error)
 	Update(request *model.UserRequest) (*model.UserResponse, error)
@@ -29,7 +29,7 @@ func New(deps *Deps, config *Config) UsersService {
 	return &UsersServiceImpl{deps: deps}
 }
 
-func (impl *UsersServiceImpl) GetAll() ([]*model.UserResponse, error) {
+func (impl *UsersServiceImpl) List() ([]*model.UserResponse, error) {
 	users, err := impl.deps.Users.GetUsers()
 	if err != nil {
 		log.Println("Could not get users. ", err)
