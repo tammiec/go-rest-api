@@ -17,7 +17,7 @@ func TestList_Success(t *testing.T) {
 		&model.UserResponse{
 			Id:    1,
 			Name:  "test",
-			Email: "test@test.com",
+			Email: "test",
 		},
 	}
 
@@ -49,7 +49,7 @@ func TestGet_Success(t *testing.T) {
 	expectedResponse := &model.UserResponse{
 		Id:    1,
 		Name:  "test",
-		Email: "test@test.com",
+		Email: "test",
 	}
 
 	usersMock.EXPECT().GetUser(gomock.Any()).Return(expectedResponse, nil).Times(1)
@@ -72,6 +72,131 @@ func TestGet_Error(t *testing.T) {
 
 	id := 1
 	_, err := users.Get(&model.UserRequest{Id: &id})
+
+	require.Error(t, err)
+}
+
+func TestCreate_Success(t *testing.T) {
+	usersMock := mock_users_dal.NewMockUsers(gomock.NewController(t))
+
+	expectedResponse := &model.UserResponse{
+		Id:    1,
+		Name:  "test",
+		Email: "test",
+	}
+
+	usersMock.EXPECT().CreateUser(gomock.Any(), gomock.Any(), gomock.Any()).Return(expectedResponse, nil).Times(1)
+
+	users := impl{&Deps{Users: usersMock}}
+
+	testString := "test"
+	result, err := users.Create(&model.UserRequest{
+		Name:     &testString,
+		Email:    &testString,
+		Password: &testString,
+	})
+
+	require.NoError(t, err)
+	require.Equal(t, expectedResponse, result)
+}
+
+func TestCreate_Error(t *testing.T) {
+	usersMock := mock_users_dal.NewMockUsers(gomock.NewController(t))
+
+	usersMock.EXPECT().CreateUser(gomock.Any(), gomock.Any(), gomock.Any()).Return(&model.UserResponse{}, errors.New("test")).Times(1)
+
+	users := impl{&Deps{Users: usersMock}}
+
+	testString := "test"
+	_, err := users.Create(&model.UserRequest{
+		Name:     &testString,
+		Email:    &testString,
+		Password: &testString,
+	})
+
+	require.Error(t, err)
+}
+
+func TestUpdate_Success(t *testing.T) {
+	usersMock := mock_users_dal.NewMockUsers(gomock.NewController(t))
+
+	expectedResponse := &model.UserResponse{
+		Id:    1,
+		Name:  "test",
+		Email: "test",
+	}
+
+	usersMock.EXPECT().UpdateUser(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(expectedResponse, nil).Times(1)
+
+	users := impl{&Deps{Users: usersMock}}
+
+	id := 1
+	testString := "test"
+	result, err := users.Update(&model.UserRequest{
+		Id:       &id,
+		Name:     &testString,
+		Email:    &testString,
+		Password: &testString,
+	})
+
+	require.NoError(t, err)
+	require.Equal(t, expectedResponse, result)
+}
+
+func TestUpdate_Error(t *testing.T) {
+	usersMock := mock_users_dal.NewMockUsers(gomock.NewController(t))
+
+	usersMock.EXPECT().UpdateUser(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&model.UserResponse{}, errors.New("test")).Times(1)
+
+	users := impl{&Deps{Users: usersMock}}
+
+	id := 1
+	testString := "test"
+	_, err := users.Update(&model.UserRequest{
+		Id:       &id,
+		Name:     &testString,
+		Email:    &testString,
+		Password: &testString,
+	})
+
+	require.Error(t, err)
+}
+
+func TestDelete_Success(t *testing.T) {
+	usersMock := mock_users_dal.NewMockUsers(gomock.NewController(t))
+
+	expectedResponse := &model.UserResponse{
+		Id:    1,
+		Name:  "test",
+		Email: "test",
+	}
+
+	usersMock.EXPECT().DeleteUser(gomock.Any()).Return(expectedResponse, nil).Times(1)
+
+	users := impl{&Deps{Users: usersMock}}
+
+	id := 1
+	testString := "test"
+	result, err := users.Delete(&model.UserRequest{
+		Id:       &id,
+		Name:     &testString,
+		Email:    &testString,
+		Password: &testString,
+	})
+
+	require.NoError(t, err)
+	require.Equal(t, expectedResponse, result)
+}
+
+func TestDelete_Error(t *testing.T) {
+	usersMock := mock_users_dal.NewMockUsers(gomock.NewController(t))
+
+	usersMock.EXPECT().DeleteUser(gomock.Any()).Return(&model.UserResponse{}, errors.New("test")).Times(1)
+
+	users := impl{&Deps{Users: usersMock}}
+
+	id := 1
+	_, err := users.Delete(&model.UserRequest{Id: &id})
 
 	require.Error(t, err)
 }
