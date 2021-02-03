@@ -1,4 +1,4 @@
-package model
+package users
 
 import (
 	"context"
@@ -20,11 +20,11 @@ type Config struct {
 type Users interface {
 	GetName() string
 	Ping(ctx context.Context) error
-	GetUsers() ([]*model.UserResponse, error)
-	GetUser(id int) (*model.UserResponse, error)
-	CreateUser(name string, email string, password string) (*model.UserResponse, error)
-	UpdateUser(id int, name string, email string, password string) (*model.UserResponse, error)
-	DeleteUser(id int) (*model.UserResponse, error)
+	List() ([]*model.UserResponse, error)
+	Get(id int) (*model.UserResponse, error)
+	Create(name string, email string, password string) (*model.UserResponse, error)
+	Update(id int, name string, email string, password string) (*model.UserResponse, error)
+	Delete(id int) (*model.UserResponse, error)
 }
 
 type impl struct {
@@ -48,7 +48,7 @@ func (impl *impl) Ping(ctx context.Context) error {
 	return impl.db.PingContext(ctx)
 }
 
-func (impl *impl) GetUsers() ([]*model.UserResponse, error) {
+func (impl *impl) List() ([]*model.UserResponse, error) {
 	rows, err := impl.db.Query("SELECT id, name, email FROM users")
 	if err != nil {
 		return nil, err
@@ -72,7 +72,7 @@ func (impl *impl) GetUsers() ([]*model.UserResponse, error) {
 	return users, err
 }
 
-func (impl *impl) GetUser(id int) (*model.UserResponse, error) {
+func (impl *impl) Get(id int) (*model.UserResponse, error) {
 	user := &model.UserResponse{}
 	stmt, err := impl.db.Prepare("SELECT id, name, email FROM users WHERE id=$1")
 	if err != nil {
@@ -86,7 +86,7 @@ func (impl *impl) GetUser(id int) (*model.UserResponse, error) {
 	return user, err
 }
 
-func (impl *impl) DeleteUser(id int) (*model.UserResponse, error) {
+func (impl *impl) Delete(id int) (*model.UserResponse, error) {
 	user := &model.UserResponse{}
 	stmt, err := impl.db.Prepare("DELETE FROM users WHERE id=$1 RETURNING id, name, email")
 	if err != nil {
@@ -100,7 +100,7 @@ func (impl *impl) DeleteUser(id int) (*model.UserResponse, error) {
 	return user, err
 }
 
-func (impl *impl) CreateUser(name string, email string, password string) (*model.UserResponse, error) {
+func (impl *impl) Create(name string, email string, password string) (*model.UserResponse, error) {
 	user := &model.UserResponse{}
 	stmt, err := impl.db.Prepare("INSERT INTO users (name, email, password) VALUES ($1, $2, $3) RETURNING id, name, email")
 	if err != nil {
@@ -114,7 +114,7 @@ func (impl *impl) CreateUser(name string, email string, password string) (*model
 	return user, err
 }
 
-func (impl *impl) UpdateUser(id int, name string, email string, password string) (*model.UserResponse, error) {
+func (impl *impl) Update(id int, name string, email string, password string) (*model.UserResponse, error) {
 	user := &model.UserResponse{}
 	stmt, err := impl.db.Prepare("UPDATE users SET name=$1, email=$2, password=$3 WHERE id=$4 RETURNING id, name, email")
 	if err != nil {

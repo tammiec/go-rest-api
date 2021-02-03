@@ -21,7 +21,7 @@ func TestList_Success(t *testing.T) {
 		},
 	}
 
-	usersMock.EXPECT().GetUsers().Return(expectedResponse, nil).Times(1)
+	usersMock.EXPECT().List().Return(expectedResponse, nil).Times(1)
 
 	users := impl{&Deps{Users: usersMock}}
 
@@ -34,7 +34,7 @@ func TestList_Success(t *testing.T) {
 func TestList_Error(t *testing.T) {
 	usersMock := mock_users_dal.NewMockUsers(gomock.NewController(t))
 
-	usersMock.EXPECT().GetUsers().Return([]*model.UserResponse{}, errors.New("test")).Times(1)
+	usersMock.EXPECT().List().Return([]*model.UserResponse{}, errors.New("test")).Times(1)
 
 	users := impl{&Deps{Users: usersMock}}
 
@@ -52,7 +52,7 @@ func TestGet_Success(t *testing.T) {
 		Email: "test",
 	}
 
-	usersMock.EXPECT().GetUser(gomock.Any()).Return(expectedResponse, nil).Times(1)
+	usersMock.EXPECT().Get(gomock.Any()).Return(expectedResponse, nil).Times(1)
 
 	users := impl{&Deps{Users: usersMock}}
 
@@ -66,7 +66,7 @@ func TestGet_Success(t *testing.T) {
 func TestGet_Error(t *testing.T) {
 	usersMock := mock_users_dal.NewMockUsers(gomock.NewController(t))
 
-	usersMock.EXPECT().GetUser(gomock.Any()).Return(&model.UserResponse{}, errors.New("test")).Times(1)
+	usersMock.EXPECT().Get(gomock.Any()).Return(&model.UserResponse{}, errors.New("test")).Times(1)
 
 	users := impl{&Deps{Users: usersMock}}
 
@@ -85,7 +85,7 @@ func TestCreate_Success(t *testing.T) {
 		Email: "test",
 	}
 
-	usersMock.EXPECT().CreateUser(gomock.Any(), gomock.Any(), gomock.Any()).Return(expectedResponse, nil).Times(1)
+	usersMock.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).Return(expectedResponse, nil).Times(1)
 
 	users := impl{&Deps{Users: usersMock}}
 
@@ -103,7 +103,7 @@ func TestCreate_Success(t *testing.T) {
 func TestCreate_Error(t *testing.T) {
 	usersMock := mock_users_dal.NewMockUsers(gomock.NewController(t))
 
-	usersMock.EXPECT().CreateUser(gomock.Any(), gomock.Any(), gomock.Any()).Return(&model.UserResponse{}, errors.New("test")).Times(1)
+	usersMock.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).Return(&model.UserResponse{}, errors.New("test")).Times(1)
 
 	users := impl{&Deps{Users: usersMock}}
 
@@ -126,7 +126,7 @@ func TestUpdate_Success(t *testing.T) {
 		Email: "test",
 	}
 
-	usersMock.EXPECT().UpdateUser(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(expectedResponse, nil).Times(1)
+	usersMock.EXPECT().Update(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(expectedResponse, nil).Times(1)
 
 	users := impl{&Deps{Users: usersMock}}
 
@@ -146,7 +146,7 @@ func TestUpdate_Success(t *testing.T) {
 func TestUpdate_Error(t *testing.T) {
 	usersMock := mock_users_dal.NewMockUsers(gomock.NewController(t))
 
-	usersMock.EXPECT().UpdateUser(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&model.UserResponse{}, errors.New("test")).Times(1)
+	usersMock.EXPECT().Update(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&model.UserResponse{}, errors.New("test")).Times(1)
 
 	users := impl{&Deps{Users: usersMock}}
 
@@ -171,7 +171,7 @@ func TestDelete_Success(t *testing.T) {
 		Email: "test",
 	}
 
-	usersMock.EXPECT().DeleteUser(gomock.Any()).Return(expectedResponse, nil).Times(1)
+	usersMock.EXPECT().Delete(gomock.Any()).Return(expectedResponse, nil).Times(1)
 
 	users := impl{&Deps{Users: usersMock}}
 
@@ -191,7 +191,7 @@ func TestDelete_Success(t *testing.T) {
 func TestDelete_Error(t *testing.T) {
 	usersMock := mock_users_dal.NewMockUsers(gomock.NewController(t))
 
-	usersMock.EXPECT().DeleteUser(gomock.Any()).Return(&model.UserResponse{}, errors.New("test")).Times(1)
+	usersMock.EXPECT().Delete(gomock.Any()).Return(&model.UserResponse{}, errors.New("test")).Times(1)
 
 	users := impl{&Deps{Users: usersMock}}
 

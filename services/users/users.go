@@ -30,7 +30,7 @@ func New(deps *Deps, config *Config) UsersService {
 }
 
 func (impl *impl) List() ([]*model.UserResponse, error) {
-	users, err := impl.deps.Users.GetUsers()
+	users, err := impl.deps.Users.List()
 	if err != nil {
 		log.Println("Could not get users. ", err)
 		return []*model.UserResponse{}, err
@@ -39,7 +39,7 @@ func (impl *impl) List() ([]*model.UserResponse, error) {
 }
 
 func (impl *impl) Get(request *model.UserRequest) (*model.UserResponse, error) {
-	user, err := impl.deps.Users.GetUser(*request.Id)
+	user, err := impl.deps.Users.Get(*request.Id)
 	if err != nil {
 		log.Println("Could not get user. ", err)
 		return &model.UserResponse{}, err
@@ -48,7 +48,7 @@ func (impl *impl) Get(request *model.UserRequest) (*model.UserResponse, error) {
 }
 
 func (impl *impl) Create(request *model.UserRequest) (*model.UserResponse, error) {
-	user, err := impl.deps.Users.CreateUser(*request.Name, *request.Email, *request.Password)
+	user, err := impl.deps.Users.Create(*request.Name, *request.Email, *request.Password)
 	if err != nil {
 		log.Println("Could not create user. ", err)
 		return &model.UserResponse{}, err
@@ -57,7 +57,7 @@ func (impl *impl) Create(request *model.UserRequest) (*model.UserResponse, error
 }
 
 func (impl *impl) Update(request *model.UserRequest) (*model.UserResponse, error) {
-	user, err := impl.deps.Users.UpdateUser(*request.Id, *request.Name, *request.Email, *request.Password)
+	user, err := impl.deps.Users.Update(*request.Id, *request.Name, *request.Email, *request.Password)
 	if err != nil {
 		log.Println("Could not create user. ", err)
 		return &model.UserResponse{}, err
@@ -66,7 +66,7 @@ func (impl *impl) Update(request *model.UserRequest) (*model.UserResponse, error
 }
 
 func (impl *impl) Delete(request *model.UserRequest) (*model.UserResponse, error) {
-	user, err := impl.deps.Users.DeleteUser(*request.Id)
+	user, err := impl.deps.Users.Delete(*request.Id)
 	if err != nil {
 		log.Println("Could not delete user. ", err)
 		return &model.UserResponse{}, err
