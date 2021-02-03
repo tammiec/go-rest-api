@@ -1,7 +1,6 @@
 package users
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -134,11 +133,11 @@ func parseUrlParam(urlParams map[string][]string, key string, render render.Rend
 	var value *string
 	val, ok := urlParams[key]
 	if ok == false {
-		respondWithError(render, w, http.StatusBadRequest, fmt.Sprintf("Bad Request - Missing Parameter %s", key))
+		log.Printf("Missing Parameter %s", key)
 		return value
 	} else {
 		value = &val[0]
 	}
-	log.Println(key, value, ok)
+	// log.Println(key, value, ok)
 	return value
 }
