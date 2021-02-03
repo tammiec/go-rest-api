@@ -11,7 +11,6 @@ require (
 	github.com/joho/godotenv v1.3.0 // indirect
 	github.com/justinas/alice v1.2.0
 	github.com/lib/pq v1.8.0
-	github.com/prometheus/client_golang v1.9.0
 	github.com/stretchr/testify v1.6.1
 	github.com/unrolled/render v1.0.3
 )
