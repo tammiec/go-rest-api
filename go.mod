@@ -5,6 +5,7 @@ go 1.15
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.0
 	github.com/dyninc/qstring v0.0.0-20160719172318-ab5840a88e81
+	github.com/go-sql-driver/mysql v1.5.0
 	github.com/golang/mock v1.4.4
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0

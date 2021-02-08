@@ -4,7 +4,7 @@ services:
   postgres:
     image: postgres:13.1
     environment:
-      - POSTGRES_USER=test_user
+      - POSTGRES_USER=root
       - POSTGRES_PASSWORD=test
       - POSTGRES_DB=test
     ports:
