@@ -2,197 +2,188 @@ package users
 
 import (
 	"database/sql"
-	"os"
+	"errors"
+	"fmt"
 	"testing"
 
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/require"
-	"github.com/tammiec/go-rest-api/testutils"
 )
 
-var db *sql.DB
+func getMockDB() (*sql.DB, sqlmock.Sqlmock) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		panic(fmt.Sprintf("an error '%s' was not expected when opening a stub database connection", err))
+	}
+	return db, mock
+}
 
-func TestMain(m *testing.M) {
-	db = testutils.GetDB()
+func TestListQueryError(t *testing.T) {
+	db, mock := getMockDB()
 	defer db.Close()
-	os.Exit(m.Run())
+
+	mock.ExpectQuery("SELECT").WillReturnError(errors.New("Mock Error"))
+
+	mockDAL := &impl{db: db}
+
+	_, err := mockDAL.List()
+
+	require.Error(t, err)
+	require.Equal(t, "Mock Error", err.Error())
 }
 
-func usersSetup() {
-	testutils.RunSQLFile(db, `users_schema.sql`)
+func TestListQueryBadRow(t *testing.T) {
+	db, mock := getMockDB()
+	defer db.Close()
+
+	rows := mock.NewRows([]string{"id", "name", "email"})
+	rows.AddRow("1", "Kaladin", nil)
+	mock.ExpectQuery("SELECT").WillReturnRows(rows)
+
+	mockDAL := &impl{db: db}
+
+	_, err := mockDAL.List()
+
+	require.Error(t, err)
+	require.Equal(t, "sql: Scan error on column index 2, name \"email\": converting NULL to string is unsupported", err.Error())
 }
 
-// func getMockDB() (*sql.DB, sqlmock.Sqlmock) {
-// 	db, mock, err := sqlmock.New()
-// 	if err != nil {
-// 		panic(fmt.Sprintf("an error '%s' was not expected when opening a stub database connection", err))
-// 	}
-// 	return db, mock
-// }
+func TestGetSuccessfully(t *testing.T) {
+	db, mock := getMockDB()
+	defer db.Close()
 
-// // func TestGetDb(t *testing.T) {
-// // 	url, _ := os.LookupEnv("DATABASE_URL")
-// // 	db := GetDb(url)
-// // 	require.IsType(t, &sql.DB{}, db)
-// // }
+	mock.ExpectPrepare("SELECT")
+	rows := mock.NewRows([]string{"id", "name", "email"})
+	rows.AddRow("1", "Kaladin", "k@s.com")
+	mock.ExpectQuery("SELECT").WithArgs(1).WillReturnRows(rows)
 
-func TestUsers_ListSuccess(t *testing.T) {
-	usersSetup()
-	testutils.RunSQLFile(db, `users_insert.sql`)
+	mockDAL := &impl{db: db}
 
-	usersDAL := impl{db: db}
-
-	users, err := usersDAL.List()
+	result, err := mockDAL.Get(1)
 
 	require.NoError(t, err)
-	require.Equal(t, "", users)
+	require.Equal(t, 1, result.Id)
+	require.Equal(t, "Kaladin", result.Name)
+	require.Equal(t, "k@s.com", result.Email)
 }
 
-// func TestListQueryError(t *testing.T) {
-// 	db, mock := getMockDB()
-// 	defer db.Close()
+func TestGetQueryError(t *testing.T) {
+	db, mock := getMockDB()
+	defer db.Close()
 
-// 	mock.ExpectQuery("SELECT").WillReturnError(errors.New("Mock Error"))
+	mock.ExpectPrepare("SELECT")
+	mock.ExpectQuery("SELECT").WithArgs(1).WillReturnError(errors.New("Mock Error"))
 
-// 	_, err := List(db)
+	mockDAL := &impl{db: db}
 
-// 	require.Error(t, err)
-// 	require.Equal(t, "Mock Error", err.Error())
-// }
+	_, err := mockDAL.Get(1)
 
-// func TestListQueryBadRow(t *testing.T) {
-// 	db, mock := getMockDB()
-// 	defer db.Close()
+	require.Error(t, err)
+	require.Equal(t, "Mock Error", err.Error())
+}
 
-// 	rows := mock.NewRows([]string{"id", "name", "email"})
-// 	rows.AddRow("1", "Kaladin", nil)
-// 	mock.ExpectQuery("SELECT").WillReturnRows(rows)
+func TestGetQueryBadRow(t *testing.T) {
+	db, mock := getMockDB()
+	defer db.Close()
 
-// 	_, err := List(db)
+	mock.ExpectPrepare("SELECT")
+	rows := mock.NewRows([]string{"id", "name", "email"})
+	rows.AddRow("1", "Kaladin", nil)
+	mock.ExpectQuery("SELECT").WithArgs(1).WillReturnRows(rows)
 
-// 	require.Error(t, err)
-// 	require.Equal(t, "sql: Scan error on column index 2, name \"email\": converting NULL to string is unsupported", err.Error())
-// }
+	mockDAL := &impl{db: db}
 
-// func TestGetSuccessfully(t *testing.T) {
-// 	db, mock := getMockDB()
-// 	defer db.Close()
+	_, err := mockDAL.Get(1)
 
-// 	mock.ExpectPrepare("SELECT")
-// 	rows := mock.NewRows([]string{"id", "name", "email"})
-// 	rows.AddRow("1", "Kaladin", "k@s.com")
-// 	mock.ExpectQuery("SELECT").WithArgs(1).WillReturnRows(rows)
+	require.Error(t, err)
+	require.Equal(t, "sql: Scan error on column index 2, name \"email\": converting NULL to string is unsupported", err.Error())
+}
 
-// 	result, err := Get(db, 1)
+func TestDeleteSuccessfully(t *testing.T) {
+	db, mock := getMockDB()
+	defer db.Close()
 
-// 	require.NoError(t, err)
-// 	require.Equal(t, 1, result.Id)
-// 	require.Equal(t, "Kaladin", result.Name)
-// 	require.Equal(t, "k@s.com", result.Email)
-// }
+	mock.ExpectPrepare("DELETE")
+	rows := mock.NewRows([]string{"id", "name", "email"})
+	rows.AddRow("1", "Kaladin", "k@s.com")
+	mock.ExpectQuery("DELETE").WithArgs(1).WillReturnRows(rows)
 
-// func TestGetQueryError(t *testing.T) {
-// 	db, mock := getMockDB()
-// 	defer db.Close()
+	mockDAL := &impl{db: db}
 
-// 	mock.ExpectPrepare("SELECT")
-// 	mock.ExpectQuery("SELECT").WithArgs(1).WillReturnError(errors.New("Mock Error"))
+	result, err := mockDAL.Delete(1)
 
-// 	_, err := Get(db, 1)
+	require.NoError(t, err)
+	require.Equal(t, 1, result.Id)
+	require.Equal(t, "Kaladin", result.Name)
+	require.Equal(t, "k@s.com", result.Email)
+}
 
-// 	require.Error(t, err)
-// 	require.Equal(t, "Mock Error", err.Error())
-// }
+func TestDeleteQueryInvalidUser(t *testing.T) {
+	db, mock := getMockDB()
+	defer db.Close()
 
-// func TestGetQueryBadRow(t *testing.T) {
-// 	db, mock := getMockDB()
-// 	defer db.Close()
+	mock.ExpectPrepare("DELETE")
+	rows := mock.NewRows([]string{"id", "name", "email"})
+	rows.AddRow("1", "Kaladin", "k@s.com")
+	mock.ExpectQuery("DELETE").WithArgs(2).WillReturnError(errors.New("sql: no rows in result set"))
 
-// 	mock.ExpectPrepare("SELECT")
-// 	rows := mock.NewRows([]string{"id", "name", "email"})
-// 	rows.AddRow("1", "Kaladin", nil)
-// 	mock.ExpectQuery("SELECT").WithArgs(1).WillReturnRows(rows)
+	mockDAL := &impl{db: db}
 
-// 	_, err := Get(db, 1)
+	_, err := mockDAL.Delete(2)
 
-// 	require.Error(t, err)
-// 	require.Equal(t, "sql: Scan error on column index 2, name \"email\": converting NULL to string is unsupported", err.Error())
-// }
+	require.Error(t, err)
+	require.Equal(t, "sql: no rows in result set", err.Error())
+}
 
-// func TestDeleteSuccessfully(t *testing.T) {
-// 	db, mock := getMockDB()
-// 	defer db.Close()
+func TestCreateSuccessfully(t *testing.T) {
+	db, mock := getMockDB()
+	defer db.Close()
 
-// 	mock.ExpectPrepare("DELETE")
-// 	rows := mock.NewRows([]string{"id", "name", "email"})
-// 	rows.AddRow("1", "Kaladin", "k@s.com")
-// 	mock.ExpectQuery("DELETE").WithArgs(1).WillReturnRows(rows)
+	mock.ExpectPrepare("INSERT")
+	rows := mock.NewRows([]string{"name", "email", "password"})
+	rows.AddRow(1, "Kaladin", "k@s.com")
+	mock.ExpectQuery("INSERT").WithArgs("Kaladin", "k@s.com", "password").WillReturnRows(rows)
 
-// 	result, err := Delete(db, 1)
+	mockDAL := &impl{db: db}
 
-// 	require.NoError(t, err)
-// 	require.Equal(t, 1, result.Id)
-// 	require.Equal(t, "Kaladin", result.Name)
-// 	require.Equal(t, "k@s.com", result.Email)
-// }
+	result, err := mockDAL.Create("Kaladin", "k@s.com", "password")
 
-// func TestDeleteQueryInvalidUser(t *testing.T) {
-// 	db, mock := getMockDB()
-// 	defer db.Close()
+	require.NoError(t, err)
+	require.Equal(t, "Kaladin", result.Name)
+	require.Equal(t, "k@s.com", result.Email)
+}
 
-// 	mock.ExpectPrepare("DELETE")
-// 	rows := mock.NewRows([]string{"id", "name", "email"})
-// 	rows.AddRow("1", "Kaladin", "k@s.com")
-// 	mock.ExpectQuery("DELETE").WithArgs(2).WillReturnError(errors.New("sql: no rows in result set"))
+func TestUpdateSuccessfully(t *testing.T) {
+	db, mock := getMockDB()
+	defer db.Close()
 
-// 	_, err := Delete(db, 2)
+	mock.ExpectPrepare("UPDATE")
+	rows := mock.NewRows([]string{"id", "name", "email"})
+	rows.AddRow(1, "Kaladin", "k@s.com")
+	mock.ExpectQuery("UPDATE").WithArgs("Kaladin", "k@s.com", "password", 1).WillReturnRows(rows)
 
-// 	require.Error(t, err)
-// 	require.Equal(t, "sql: no rows in result set", err.Error())
-// }
+	mockDAL := &impl{db: db}
 
-// func TestCreateSuccessfully(t *testing.T) {
-// 	db, mock := getMockDB()
-// 	defer db.Close()
+	result, err := mockDAL.Update(1, "Kaladin", "k@s.com", "password")
 
-// 	mock.ExpectPrepare("INSERT")
-// 	rows := mock.NewRows([]string{"name", "email", "password"})
-// 	rows.AddRow(1, "Kaladin", "k@s.com")
-// 	mock.ExpectQuery("INSERT").WithArgs("Kaladin", "k@s.com", "password").WillReturnRows(rows)
+	require.NoError(t, err)
+	require.Equal(t, "Kaladin", result.Name)
+	require.Equal(t, "k@s.com", result.Email)
+}
 
-// 	result, err := Create(db, "Kaladin", "k@s.com", "password")
+func TestUpdateInvalidUser(t *testing.T) {
+	db, mock := getMockDB()
+	defer db.Close()
 
-// 	require.NoError(t, err)
-// 	require.Equal(t, "Kaladin", result.Name)
-// 	require.Equal(t, "k@s.com", result.Email)
-// }
+	mock.ExpectPrepare("UPDATE")
+	rows := mock.NewRows([]string{"id", "name", "email"})
+	rows.AddRow(1, "Kaladin", "k@s.com")
+	mock.ExpectQuery("UPDATE").WithArgs("Kaladin", "k@s.com", "password", 2).WillReturnError(errors.New("sql: no rows in result set"))
 
-// func TestUpdateSuccessfully(t *testing.T) {
-// 	db, mock := getMockDB()
-// 	defer db.Close()
+	mockDAL := &impl{db: db}
 
-// 	mock.ExpectPrepare("UPDATE")
-// 	rows := mock.NewRows([]string{"id", "name", "email"})
-// 	rows.AddRow(1, "Kaladin", "k@s.com")
-// 	mock.ExpectQuery("UPDATE").WithArgs("Kaladin", "k@s.com", "password", 1).WillReturnRows(rows)
+	_, err := mockDAL.Update(2, "Kaladin", "k@s.com", "password")
 
-// 	result, err := Update(db, 1, "Kaladin", "k@s.com", "password")
-
-// 	require.NoError(t, err)
-// 	require.Equal(t, "Kaladin", result.Name)
-// 	require.Equal(t, "k@s.com", result.Email)
-// }
-
-// func TestUpdateInvalidUser(t *testing.T) {
-// 	db, mock := getMockDB()
-// 	defer db.Close()
-
-// 	mock.ExpectPrepare("UPDATE")
-// 	rows := mock.NewRows([]string{"id", "name", "email"})
-// 	rows.AddRow(1, "Kaladin", "k@s.com")
-// 	mock.ExpectQuery("UPDATE").WithArgs("Kaladin", "k@s.com", "password", 2).WillReturnError(errors.New("sql: no rows in result set"))
-
-// 	_, err := Update(db, 2, "Kaladin", "k@s.com", "password")
-
-// 	require.Error(t, err)
-// 	require.Equal(t, "sql: no rows in result set", err.Error())
-// }
+	require.Error(t, err)
+	require.Equal(t, "sql: no rows in result set", err.Error())
+}

@@ -14,13 +14,7 @@ run:
 	PATH=$(PATH):$(HOME)/go/bin godotenv -f .env go run .
 .PHONY: run
 
-# test:
-# 	go test -coverprofile=cover.out ./...
-# .PHONY: test
-
 test:
-	make docker-deps-start
-	# ./scripts/wait-for-sql.sh
 	go test -coverprofile=cover.out ./...
 .PHONY: test
 
