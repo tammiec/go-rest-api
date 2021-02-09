@@ -14,8 +14,6 @@ type Deps struct {
 	Users Pingable
 }
 
-type Config struct{}
-
 type Health interface {
 	Ping(ctx context.Context) *HealthResponse
 }
@@ -24,7 +22,7 @@ type HealthImpl struct {
 	deps *Deps
 }
 
-func New(deps *Deps, config *Config) Health {
+func New(deps *Deps) Health {
 	return &HealthImpl{deps: deps}
 }
 

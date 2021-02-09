@@ -40,7 +40,7 @@ func BuildServices(dals *DALs) *Services {
 	usersService := usersService.New(usersDeps, &usersService.Config{})
 
 	healthDeps := &health.Deps{Users: dals.Users}
-	healthService := health.New(healthDeps, &health.Config{})
+	healthService := health.New(healthDeps)
 
 	return &Services{Health: healthService, Users: usersService}
 }

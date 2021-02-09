@@ -5,7 +5,9 @@ get:
 
 build-mocks:
 	PATH=$(PATH):$(HOME)/go/bin mockgen -source=handlers/users/users.go -destination=generatedmocks/handlers/users/users.go
+	PATH=$(PATH):$(HOME)/go/bin mockgen -source=handlers/health/health.go -destination=generatedmocks/handlers/health/health.go
 	PATH=$(PATH):$(HOME)/go/bin mockgen -source=services/users/users.go -destination=generatedmocks/services/users/users.go
+	PATH=$(PATH):$(HOME)/go/bin mockgen -source=services/health/health.go -destination=generatedmocks/services/health/health.go
 	PATH=$(PATH):$(HOME)/go/bin mockgen -source=clients/render/render.go -destination=generatedmocks/clients/render/render.go
 	PATH=$(PATH):$(HOME)/go/bin mockgen -source=dals/users/users.go -destination=generatedmocks/dals/users/users.go
 .PHONY: build-mocks
