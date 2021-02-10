@@ -1,12 +1,12 @@
 package users
 
 import (
-	"log"
 	"net/http"
 	"strconv"
 
 	"github.com/gorilla/mux"
 	"github.com/tammiec/go-rest-api/clients/render"
+	"github.com/tammiec/go-rest-api/errs"
 	"github.com/tammiec/go-rest-api/handlers/utils"
 	model "github.com/tammiec/go-rest-api/models/user"
 	usersService "github.com/tammiec/go-rest-api/services/users"
@@ -45,7 +45,7 @@ func (impl *HandlerImpl) List(w http.ResponseWriter, r *http.Request) {
 }
 
 func (impl *HandlerImpl) Get(w http.ResponseWriter, r *http.Request) {
-	request := parseRequest(w, r, impl.Deps.Render, true)
+	request := parseRequest(w, r, impl.Deps.Render, true, []string{})
 	if request == nil {
 		return
 	}
@@ -58,7 +58,7 @@ func (impl *HandlerImpl) Get(w http.ResponseWriter, r *http.Request) {
 }
 
 func (impl *HandlerImpl) Create(w http.ResponseWriter, r *http.Request) {
-	request := parseRequest(w, r, impl.Deps.Render, false)
+	request := parseRequest(w, r, impl.Deps.Render, false, []string{"name", "email", "password"})
 	if request == nil {
 		return
 	}
@@ -71,7 +71,7 @@ func (impl *HandlerImpl) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (impl *HandlerImpl) Update(w http.ResponseWriter, r *http.Request) {
-	request := parseRequest(w, r, impl.Deps.Render, true)
+	request := parseRequest(w, r, impl.Deps.Render, true, []string{"name", "email", "password"})
 	if request == nil {
 		return
 	}
@@ -84,7 +84,7 @@ func (impl *HandlerImpl) Update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (impl *HandlerImpl) Delete(w http.ResponseWriter, r *http.Request) {
-	request := parseRequest(w, r, impl.Deps.Render, true)
+	request := parseRequest(w, r, impl.Deps.Render, true, []string{})
 	if request == nil {
 		return
 	}
@@ -104,21 +104,23 @@ func respondWithError(render render.Render, w http.ResponseWriter, status int, m
 	render.JSON(w, response.Status, response)
 }
 
-func parseRequest(w http.ResponseWriter, r *http.Request, render render.Render, getId bool) *model.UserRequest {
+func parseRequest(w http.ResponseWriter, r *http.Request, render render.Render, getId bool, paramKeys []string) *model.UserRequest {
 	urlParams := r.URL.Query()
-	userRequest := model.UserRequest{
-		Name:     parseUrlParam(urlParams, "name", render, w),
-		Email:    parseUrlParam(urlParams, "email", render, w),
-		Password: parseUrlParam(urlParams, "password", render, w),
+	parsedParams, err := parseUrlParams(urlParams, paramKeys, render)
+	if err != nil {
+		respondWithError(render, w, http.StatusBadRequest, "Bad Request - Missing Params")
+		return nil
 	}
-	log.Println(r.URL.Query())
-	var err error
+	userRequest := model.UserRequest{
+		Name:     parsedParams["name"],
+		Email:    parsedParams["email"],
+		Password: parsedParams["password"],
+	}
 	if getId {
 		userRequest.Id, err = validateId(mux.Vars(r)["id"], w)
 	}
 	if err != nil {
-		log.Println(err)
-		respondWithError(render, w, http.StatusInternalServerError, "Internal Server Error")
+		respondWithError(render, w, http.StatusBadRequest, "Bad Request - Invalid User ID")
 		return nil
 	}
 	return &userRequest
@@ -129,15 +131,14 @@ func validateId(idString string, w http.ResponseWriter) (*int, error) {
 	return &id, err
 }
 
-func parseUrlParam(urlParams map[string][]string, key string, render render.Render, w http.ResponseWriter) *string {
-	var value *string
-	val, ok := urlParams[key]
-	if ok == false {
-		log.Printf("Missing Parameter %s", key)
-		return value
-	} else {
-		value = &val[0]
+func parseUrlParams(urlParams map[string][]string, paramKeys []string, render render.Render) (map[string]*string, error) {
+	parsedParams := make(map[string]*string)
+	for _, key := range paramKeys {
+		val, ok := urlParams[key]
+		if ok == false {
+			return nil, errs.ErrBadRequest
+		}
+		parsedParams[key] = &val[0]
 	}
-	// log.Println(key, value, ok)
-	return value
+	return parsedParams, nil
 }
