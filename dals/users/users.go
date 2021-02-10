@@ -3,11 +3,11 @@ package users
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 	"os"
 
 	_ "github.com/lib/pq"
+	"github.com/tammiec/go-rest-api/errs"
 	model "github.com/tammiec/go-rest-api/models/user"
 )
 
@@ -66,7 +66,7 @@ func (impl *impl) List() ([]*model.UserResponse, error) {
 	}
 
 	if len(users) < 1 {
-		return nil, errors.New("no users found")
+		return nil, errs.ErrNoRows
 	}
 
 	return users, err
