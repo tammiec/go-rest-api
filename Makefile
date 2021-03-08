@@ -23,3 +23,7 @@ test:
 docker-deps-start:
 	COMPOSE_PROJECT_NAME=test docker-compose up -d
 .PHONY: docker-deps-start
+
+lint:
+	golangci-lint run
+.PHONY: lint
