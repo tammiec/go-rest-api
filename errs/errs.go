@@ -3,7 +3,6 @@ package errs
 import "errors"
 
 var (
-	ErrBadRequest         = errors.New("bad request")
-	ErrServiceUnavailable = errors.New("service unavailable")
-	ErrNoRows             = errors.New("no rows found")
+	ErrBadRequestParams = errors.New("bad request params")
+	ErrInvalidId        = errors.New("invalid id")
 )

@@ -7,7 +7,6 @@ import (
 	"os"
 
 	_ "github.com/lib/pq"
-	"github.com/tammiec/go-rest-api/errs"
 	model "github.com/tammiec/go-rest-api/models/user"
 )
 
@@ -63,10 +62,6 @@ func (impl *impl) List() ([]*model.UserResponse, error) {
 			return nil, err
 		}
 		users = append(users, user)
-	}
-
-	if len(users) < 1 {
-		return nil, errs.ErrNoRows
 	}
 
 	return users, err

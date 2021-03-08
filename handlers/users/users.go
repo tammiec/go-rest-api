@@ -45,8 +45,16 @@ func (impl *HandlerImpl) List(w http.ResponseWriter, r *http.Request) {
 }
 
 func (impl *HandlerImpl) Get(w http.ResponseWriter, r *http.Request) {
-	request := parseRequest(w, r, impl.Deps.Render, true, []string{})
-	if request == nil {
+	request, err := parseRequest(w, r, true, []string{})
+	if err != nil {
+		switch err {
+		case errs.ErrBadRequestParams:
+			respondWithError(impl.Deps.Render, w, http.StatusBadRequest, "Bad Request - Missing Params")
+		case errs.ErrInvalidId:
+			respondWithError(impl.Deps.Render, w, http.StatusBadRequest, "Bad Request - Invalid ID")
+		default:
+			respondWithError(impl.Deps.Render, w, http.StatusInternalServerError, "Something went wrong. Please try again.")
+		}
 		return
 	}
 	result, err := impl.Deps.UsersService.Get(request)
@@ -58,8 +66,14 @@ func (impl *HandlerImpl) Get(w http.ResponseWriter, r *http.Request) {
 }
 
 func (impl *HandlerImpl) Create(w http.ResponseWriter, r *http.Request) {
-	request := parseRequest(w, r, impl.Deps.Render, false, []string{"name", "email", "password"})
-	if request == nil {
+	request, err := parseRequest(w, r, false, []string{"name", "email", "password"})
+	if err != nil {
+		switch err {
+		case errs.ErrBadRequestParams:
+			respondWithError(impl.Deps.Render, w, http.StatusBadRequest, "Bad Request - Missing Params")
+		default:
+			respondWithError(impl.Deps.Render, w, http.StatusInternalServerError, "Something went wrong. Please try again.")
+		}
 		return
 	}
 	result, err := impl.Deps.UsersService.Create(request)
@@ -67,12 +81,20 @@ func (impl *HandlerImpl) Create(w http.ResponseWriter, r *http.Request) {
 		respondWithError(impl.Deps.Render, w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	impl.Deps.Render.JSON(w, http.StatusOK, result)
+	impl.Deps.Render.JSON(w, http.StatusCreated, result)
 }
 
 func (impl *HandlerImpl) Update(w http.ResponseWriter, r *http.Request) {
-	request := parseRequest(w, r, impl.Deps.Render, true, []string{"name", "email", "password"})
-	if request == nil {
+	request, err := parseRequest(w, r, true, []string{"name", "email", "password"})
+	if err != nil {
+		switch err {
+		case errs.ErrBadRequestParams:
+			respondWithError(impl.Deps.Render, w, http.StatusBadRequest, "Bad Request - Missing Params")
+		case errs.ErrInvalidId:
+			respondWithError(impl.Deps.Render, w, http.StatusBadRequest, "Bad Request - Invalid ID")
+		default:
+			respondWithError(impl.Deps.Render, w, http.StatusInternalServerError, "Something went wrong. Please try again.")
+		}
 		return
 	}
 	result, err := impl.Deps.UsersService.Update(request)
@@ -80,12 +102,18 @@ func (impl *HandlerImpl) Update(w http.ResponseWriter, r *http.Request) {
 		respondWithError(impl.Deps.Render, w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	impl.Deps.Render.JSON(w, http.StatusOK, result)
+	impl.Deps.Render.JSON(w, http.StatusCreated, result)
 }
 
 func (impl *HandlerImpl) Delete(w http.ResponseWriter, r *http.Request) {
-	request := parseRequest(w, r, impl.Deps.Render, true, []string{})
-	if request == nil {
+	request, err := parseRequest(w, r, true, []string{})
+	if err != nil {
+		switch err {
+		case errs.ErrInvalidId:
+			respondWithError(impl.Deps.Render, w, http.StatusBadRequest, "Bad Request - Invalid ID")
+		default:
+			respondWithError(impl.Deps.Render, w, http.StatusInternalServerError, "Something went wrong. Please try again.")
+		}
 		return
 	}
 	result, err := impl.Deps.UsersService.Delete(request)
@@ -104,12 +132,11 @@ func respondWithError(render render.Render, w http.ResponseWriter, status int, m
 	render.JSON(w, response.Status, response)
 }
 
-func parseRequest(w http.ResponseWriter, r *http.Request, render render.Render, getId bool, paramKeys []string) *model.UserRequest {
+func parseRequest(w http.ResponseWriter, r *http.Request, getId bool, paramKeys []string) (*model.UserRequest, error) {
 	urlParams := r.URL.Query()
-	parsedParams, err := parseUrlParams(urlParams, paramKeys, render)
+	parsedParams, err := parseUrlParams(urlParams, paramKeys)
 	if err != nil {
-		respondWithError(render, w, http.StatusBadRequest, "Bad Request - Missing Params")
-		return nil
+		return nil, err
 	}
 	userRequest := model.UserRequest{
 		Name:     parsedParams["name"],
@@ -118,25 +145,27 @@ func parseRequest(w http.ResponseWriter, r *http.Request, render render.Render, 
 	}
 	if getId {
 		userRequest.Id, err = validateId(mux.Vars(r)["id"], w)
+		if err != nil {
+			return nil, err
+		}
 	}
-	if err != nil {
-		respondWithError(render, w, http.StatusBadRequest, "Bad Request - Invalid User ID")
-		return nil
-	}
-	return &userRequest
+	return &userRequest, nil
 }
 
 func validateId(idString string, w http.ResponseWriter) (*int, error) {
 	id, err := strconv.Atoi(idString)
-	return &id, err
+	if err != nil {
+		return nil, errs.ErrInvalidId
+	}
+	return &id, nil
 }
 
-func parseUrlParams(urlParams map[string][]string, paramKeys []string, render render.Render) (map[string]*string, error) {
+func parseUrlParams(urlParams map[string][]string, paramKeys []string) (map[string]*string, error) {
 	parsedParams := make(map[string]*string)
 	for _, key := range paramKeys {
 		val, ok := urlParams[key]
-		if ok == false {
-			return nil, errs.ErrBadRequest
+		if !ok {
+			return nil, errs.ErrBadRequestParams
 		}
 		parsedParams[key] = &val[0]
 	}
